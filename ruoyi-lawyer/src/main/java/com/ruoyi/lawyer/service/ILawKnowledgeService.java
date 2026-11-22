@@ -6,9 +6,11 @@ import org.springframework.web.multipart.MultipartFile;
 import com.ruoyi.lawyer.dto.KnowledgeChunkRequest;
 import com.ruoyi.lawyer.dto.KnowledgeDocRequest;
 import com.ruoyi.lawyer.dto.KnowledgeRechunkRequest;
+import com.ruoyi.lawyer.dto.KnowledgeSearchDebugRequest;
 import com.ruoyi.lawyer.vo.CitationVO;
 import com.ruoyi.lawyer.vo.KnowledgeChunkVO;
 import com.ruoyi.lawyer.vo.KnowledgeDocVO;
+import com.ruoyi.lawyer.vo.KnowledgeSearchDebugVO;
 
 /**
  * 法律知识库 业务层
@@ -117,4 +119,30 @@ public interface ILawKnowledgeService
      * @return 引用列表
      */
     List<CitationVO> search(String query, Integer topK);
+
+    /**
+     * 指定检索模式的检索
+     *
+     * @param query 查询文本
+     * @param topK 返回条数
+     * @param mode bm25 / vector / hybrid_rrf，空值使用配置默认模式
+     * @return 引用列表
+     */
+    List<CitationVO> search(String query, Integer topK, String mode);
+
+    /**
+     * 检索调试：多轮改写 + 三路对比
+     *
+     * @param request 调试请求
+     * @return 调试视图
+     */
+    KnowledgeSearchDebugVO searchDebug(KnowledgeSearchDebugRequest request);
+
+    /**
+     * 重建切片向量并回写 embedding_json / embedding_model
+     *
+     * @param docId 法规ID，为空表示重建全部启用文档
+     * @return {totalChunks, updatedChunks, skippedChunks, model, embeddingMode, durationMs}
+     */
+    Map<String, Object> rebuildEmbeddings(Long docId);
 }

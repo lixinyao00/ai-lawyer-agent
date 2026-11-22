@@ -2,6 +2,7 @@ package com.ruoyi.lawyer.domain;
 
 import java.io.Serializable;
 import java.util.Date;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * 法律知识库切片对象 law_knowledge_chunk
@@ -29,6 +30,13 @@ public class LawKnowledgeChunk implements Serializable
 
     /** token 估算值（V1 用 content.length()） */
     private Integer tokenCount;
+
+    /** 切片归一化浮点向量 JSON 数组；未构建时为 null */
+    @JsonIgnore
+    private String embeddingJson;
+
+    /** 生成该向量的模型标识 */
+    private String embeddingModel;
 
     /** 创建时间 */
     private Date createTime;
@@ -94,6 +102,26 @@ public class LawKnowledgeChunk implements Serializable
     public void setTokenCount(Integer tokenCount)
     {
         this.tokenCount = tokenCount;
+    }
+
+    public String getEmbeddingJson()
+    {
+        return embeddingJson;
+    }
+
+    public void setEmbeddingJson(String embeddingJson)
+    {
+        this.embeddingJson = embeddingJson;
+    }
+
+    public String getEmbeddingModel()
+    {
+        return embeddingModel;
+    }
+
+    public void setEmbeddingModel(String embeddingModel)
+    {
+        this.embeddingModel = embeddingModel;
     }
 
     public Date getCreateTime()

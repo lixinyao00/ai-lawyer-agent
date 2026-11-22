@@ -25,6 +25,7 @@ import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.lawyer.dto.KnowledgeChunkRequest;
 import com.ruoyi.lawyer.dto.KnowledgeDocRequest;
 import com.ruoyi.lawyer.dto.KnowledgeRechunkRequest;
+import com.ruoyi.lawyer.dto.KnowledgeSearchDebugRequest;
 import com.ruoyi.lawyer.service.ILawKnowledgeService;
 
 /**
@@ -67,10 +68,33 @@ public class LawKnowledgeController extends BaseController
     @PreAuthorize("@ss.hasPermi('lawyer:knowledge:query')")
     @GetMapping("/search")
     public AjaxResult search(@RequestParam("q") String q,
-            @RequestParam(required = false) Integer topK)
+            @RequestParam(required = false) Integer topK,
+            @RequestParam(required = false) String mode)
     {
         int limit = topK == null || topK < 1 ? DEFAULT_TOP_K : Math.min(topK, 10);
-        return success(knowledgeService.search(q, limit));
+        return success(knowledgeService.search(q, limit, mode));
+    }
+
+    /**
+     * 检索调试：多轮改写 + BM25 / Vector / Hybrid RRF 三路对比
+     */
+    @PreAuthorize("@ss.hasPermi('lawyer:knowledge:query')")
+    @PostMapping("/search-debug")
+    public AjaxResult searchDebug(@Validated @RequestBody KnowledgeSearchDebugRequest request)
+    {
+        return success(knowledgeService.searchDebug(request));
+    }
+
+    /**
+     * 重建知识库切片向量并回写 embedding_json / embedding_model
+     */
+    @PreAuthorize("@ss.hasPermi('lawyer:knowledge:edit')")
+    @Log(title = "知识库向量重建", businessType = BusinessType.UPDATE, isSaveRequestData = false,
+            isSaveResponseData = false)
+    @PostMapping("/rebuild-embeddings")
+    public AjaxResult rebuildEmbeddings(@RequestParam(required = false) Long docId)
+    {
+        return success(knowledgeService.rebuildEmbeddings(docId));
     }
 
     /**

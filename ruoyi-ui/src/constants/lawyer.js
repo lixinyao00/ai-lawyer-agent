@@ -43,6 +43,24 @@ export const DRAFT_STATUS = [
   { value: 'failed', label: '失败', type: 'danger' }
 ]
 
+export const RETRIEVAL_MODES = [
+  { value: 'hybrid_rrf', label: '混合检索 (BM25 + 向量 RRF)' },
+  { value: 'bm25', label: '关键词检索 (BM25)' },
+  { value: 'vector', label: '语义向量检索 (Vector)' }
+]
+
+export const AGENT_TOOL_META = {
+  search_law_articles: { label: '法条检索', color: 'primary' },
+  calc_legal_amount: { label: '法律金额/时效计算', color: 'warning' },
+  create_document_draft: { label: '法律文书起草', color: 'success' }
+}
+
+export const TOOL_STATUS_META = [
+  { value: 'running', label: '执行中', type: 'info' },
+  { value: 'success', label: '已完成', type: 'success' },
+  { value: 'error', label: '需修正重试', type: 'danger' }
+]
+
 export const ALLOWED_CONTRACT_EXT = ['docx', 'pdf', 'txt', 'md']
 
 export const MAX_FILE_MB = 10
@@ -76,4 +94,15 @@ export function getRiskLevelMeta(value) {
 
 export function getReviewStatusMeta(value) {
   return findOption(REVIEW_STATUS, value) || { value, label: value || '未知', type: 'info' }
+}
+
+export function getRetrievalModeLabel(value) {
+  return getOptionLabel(RETRIEVAL_MODES, value)
+}
+
+export function getAgentToolLabel(toolName) {
+  if (toolName && Object.prototype.hasOwnProperty.call(AGENT_TOOL_META, toolName)) {
+    return AGENT_TOOL_META[toolName].label
+  }
+  return toolName || ''
 }

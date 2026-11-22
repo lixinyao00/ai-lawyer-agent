@@ -1,109 +1,177 @@
-<p align="center">
-	<img alt="logo" src="https://oscimg.oschina.net/oscnet/up-d3d0a9303e11d522a06cd263f3079027715.png">
-</p>
-<h1 align="center" style="margin: 30px 0 30px; font-weight: bold;">RuoYi v3.9.2</h1>
-<h4 align="center">基于SpringBoot+Vue前后端分离的Java快速开发框架</h4>
-<p align="center">
-	<a href="https://gitee.com/y_project/RuoYi-Vue/stargazers"><img src="https://gitee.com/y_project/RuoYi-Vue/badge/star.svg?theme=dark"></a>
-	<a href="https://gitee.com/y_project/RuoYi-Vue"><img src="https://img.shields.io/badge/RuoYi-v3.9.2-brightgreen.svg"></a>
-	<a href="https://gitee.com/y_project/RuoYi-Vue/blob/master/LICENSE"><img src="https://img.shields.io/github/license/mashape/apistatus.svg"></a>
-</p>
+# AI 律师助手 V1.0
 
-## 平台简介
+面向中国大陆个人用户的轻量法律咨询平台。后端基于 RuoYi-Vue 3.9.2（Spring Boot 4.1.2 / Java 17+），前端基于 Vue 3 + Element Plus，提供 **智能法律咨询、法律知识库检索、合同风险审查、法律文书起草** 四项核心能力，并配套后台会话审计与知识库管理。
 
-若依是一套全部开源的快速开发平台，毫无保留给个人及企业免费使用。
+> 本项目仅提供法律信息与文书辅助，不构成执业律师出具的正式法律意见。
 
-* 前端采用Vue、Element（提供 Vue2/Vue3/TS 多版本）。
-* 后端采用Spring Boot、Spring Security、Redis & Jwt。
-* 基于Jwt的Token认证，支持多终端（Web、App、小程序）无缝接入。
-* 支持加载动态权限菜单，多方式轻松权限控制，细粒度到按钮级别。
-* 阿里云折扣场：[点我进入](http://aly.ruoyi.vip)，腾讯云秒杀场：[点我进入](http://txy.ruoyi.vip)&nbsp;&nbsp;
+## 核心能力
 
-## 本项目数据库与接口文档
+| 模块 | 用户入口 | 关键能力 |
+| :--- | :--- | :--- |
+| **M1 智能法律咨询** | 前台「智能咨询」`/lawyer/chat` | 多会话管理、历史消息、SSE 流式回答（`meta → citation → delta → done`）、`requestId` 幂等与断线回放（`replay:true`）、Redis 会话锁并发保护（`409`）、失败消息收敛、后台会话与消息审计 |
+| **M2 法律知识库 RAG** | 对话内自动检索；后台「法律知识库」`/lawyer/knowledge` | 内置 5 份法规语料首次启动自动导入（劳动合同法 + 民法典合同/租赁/借贷/侵权，共 144 个条文切片）；BM25 + bigram + 条号精确匹配的轻量检索，无需向量库；回答携带法条引用与溯源片段；后台支持法规导入、切片维护、重切与检索调试 |
+| **M3 合同风险审查 + 私有文件** | 前台「合同风险审查」`/lawyer/contract` | `.docx/.pdf/.txt/.md` 上传（大小与类型白名单校验）、文本抽取、按立场（甲方/乙方/中立）异步审查、风险等级与逐条风险/依据/修改建议、审查历史；私有文件独立落盘 `./data/lawyer-files/{userId}/`，不暴露在 `/profile/**`，下载强制归属鉴权 |
+| **M4 法律文书起草 + DOCX 导出** | 前台「法律文书起草」`/lawyer/document` | 4 套内置模板（劳动仲裁申请书、律师催款函、规范借条、房屋租赁解约通知书）、动态表单必填/格式校验（`422` 并返回字段名）、AI 生成草稿、草稿编辑/列表/详情、标准公文 DOCX 导出（Apache POI，OOXML） |
 
-- 新库依次导入 `sql/ry_20260417.sql`、`sql/lawyer.sql`、`sql/lawyer_message.sql`、`sql/lawyer_menu.sql`。
-- 已初始化的数据库依次执行 `sql/upgrade_trim_ruoyi.sql`、`sql/upgrade_trim_admin_ui.sql` 和 `sql/upgrade_user_home_permissions.sql`。第三个脚本调整普通角色授权。升级发布前，通过在线用户管理让持有普通角色的旧登录会话退出，使已有令牌同步收回原权限。
-- 开发时可使用启动参数 `--spring.profiles.active=druid,dev` 并访问 `/swagger-ui.html`。
+后台管理：
 
-# 版本分支
+- **会话管理**：分页查看全量咨询会话、消息数/失败数统计、逐条消息审计与删除。
+- **知识库管理**：法规分页、全文检索、导入、切片查看/编辑/删除、重新切片。
 
-RuoYi-Vue 后端项目提供 Spring Boot 2.x / 3.x / 4.x 多版本分支的并行维护
+## 技术栈
 
-| 名称              | 说明                      | 地址                                                    |
-| :---------------- | :------------------------ | :------------------------------------------------------ |
-| master 默认分支   | Spring Boot 4.x (JDK 17+) | https://gitee.com/y_project/RuoYi-Vue                   |
-| springboot3 分支  | Spring Boot 3.x (JDK 17+) | https://gitee.com/y_project/RuoYi-Vue/tree/springboot3  |
-| springboot2 分支  | Spring Boot 2.x (JDK 8+)  | https://gitee.com/y_project/RuoYi-Vue/tree/springboot2  |  
+- 后端：Spring Boot 4.1.2、Spring Security + JWT、MyBatis、Druid、Redis、Apache POI、FastJSON2
+- 前端：Vue 3.5、Vite 6、Element Plus 2.13、Pinia、Vue Router 4
+- 数据库：MySQL 8（`utf8mb4`）；缓存/会话锁：Redis
+- 模型接入：任意 OpenAI 兼容 Chat Completions 服务，支持 SSE 流式输出
 
-RuoYi-Vue 前端项目提供 Vue 2.x / 3.x / JavaScript / TypeScript 版本，均可混用搭配
+```
+inconnu/
+├── ruoyi-admin/          # 启动模块、REST 控制器（含 lawyer/*）
+├── ruoyi-lawyer/         # 律师业务：聊天、知识库检索、合同审查、文书、DOCX、私有文件
+├── ruoyi-common/         # 通用工具与基础能力
+├── ruoyi-framework/      # 安全、JWT、数据源等框架配置
+├── ruoyi-system/         # 系统管理
+├── ruoyi-ui/             # Vue 3 前端
+├── sql/                  # 建表、菜单与增量升级脚本
+└── doc/                  # 设计与验收文档
+```
 
-| 项目名称      | **RuoYi-Vue2** | **RuoYi-Vue3** | **RuoYi-Vue3-TypeScript**   |
-| :---          | :---           | :---           | :---                        |
-| **前端框架**  | Vue 2         | Vue 3          | Vue 3                       |
-| **脚本语言**  | JavaScript    | JavaScript     | TypeScript                  |
-| **构建工具**  | Vue CLI       | Vite           | Vite                        |
-| **UI 组件库** | Element UI    | Element Plus   | Element Plus                |
-| **状态管理**  | Vuex          | Pinia          | Pinia                       |
-| **路由管理**  | Vue Router 3  | Vue Router 4   | Vue Router 4                |
-| **核心特点**  | 1. 技术栈经典稳定<br>2. 社区资料丰富<br>3. 当前维护重心已转移 | 1. 现代前端技术栈<br>2. 开发体验与性能更优<br>3. 官方主推的活跃版本 | 1. 类型加持，减少沟通成本<br>2. 开发时有提示，效率更高<br>3. 多人协作企业级开发项目 |
-| **仓库地址**  | [RuoYi-Vue2](https://gitcode.com/yangzongzhuan/RuoYi-Vue2) | [RuoYi-Vue3](https://gitcode.com/yangzongzhuan/RuoYi-Vue3) | [RuoYi-Vue3-TypeScript](https://gitcode.com/yangzongzhuan/RuoYi-Vue3/tree/typescript) |
+## 快速开始
 
-## 内置功能
+### 1. 环境要求
 
-1. 智能咨询：创建会话、与 AI 对话并查看历史消息。
-2. 用户管理：创建和维护账号，设置状态并分配角色。
-3. 角色管理：维护角色及其菜单权限。
-4. 操作日志和登录日志：查询后台操作、登录记录及异常。
-5. 在线用户：查看活跃会话并管理登录状态。
-6. 个人中心：维护个人资料和密码。
-7. 系统接口：在开发环境查看 API 文档。
+- JDK 17 及以上（已在 JDK 21 验证）
+- Maven 3.9+
+- MySQL 8.0+
+- Redis 6.0+
+- Node.js 18+（前端）
 
-## 在线体验
+### 2. 数据库初始化
 
-- admin/admin123  
-- 陆陆续续收到一些打赏，为了更好的体验已用于演示服务器升级。谢谢各位小伙伴。
+**全新数据库**按顺序执行：
 
-演示地址：http://vue.ruoyi.vip  
-文档地址：http://doc.ruoyi.vip
+```bash
+mysql -uroot -p ry-vue < sql/ry_20260417.sql
+mysql -uroot -p ry-vue < sql/lawyer.sql
+mysql -uroot -p ry-vue < sql/lawyer_message.sql
+mysql -uroot -p ry-vue < sql/lawyer_menu.sql
+mysql -uroot -p ry-vue < sql/lawyer_v1_upgrade.sql
+```
 
-## 演示图
+**已初始化的旧库**只需执行 V1.0 增量脚本：
 
-<table>
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/cd1f90be5f2684f4560c9519c0f2a232ee8.jpg"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/1cbcf0e6f257c7d3a063c0e3f2ff989e4b3.jpg"/></td>
-    </tr>
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-8074972883b5ba0622e13246738ebba237a.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-9f88719cdfca9af2e58b352a20e23d43b12.png"/></td>
-    </tr>
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-39bf2584ec3a529b0d5a3b70d15c9b37646.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-936ec82d1f4872e1bc980927654b6007307.png"/></td>
-    </tr>
-	<tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-b2d62ceb95d2dd9b3fbe157bb70d26001e9.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-d67451d308b7a79ad6819723396f7c3d77a.png"/></td>
-    </tr>	 
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/5e8c387724954459291aafd5eb52b456f53.jpg"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/644e78da53c2e92a95dfda4f76e6d117c4b.jpg"/></td>
-    </tr>
-	<tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-8370a0d02977eebf6dbf854c8450293c937.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-49003ed83f60f633e7153609a53a2b644f7.png"/></td>
-    </tr>
-	<tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-d4fe726319ece268d4746602c39cffc0621.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-c195234bbcd30be6927f037a6755e6ab69c.png"/></td>
-    </tr>
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/b6115bc8c31de52951982e509930b20684a.jpg"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-5e4daac0bb59612c5038448acbcef235e3a.png"/></td>
-    </tr>
-</table>
+```bash
+mysql -uroot -p ry-vue < sql/lawyer_v1_upgrade.sql
+```
 
+`sql/lawyer_v1_upgrade.sql` 幂等，可重复执行，不包含 `DROP TABLE`、`TRUNCATE` 或业务数据清理，主要包含：
 
-## 若依前后端分离交流群
+1. `law_chat_message` 增加 `citations_json` 列（存储法条引用溯源）；
+2. 新建 `law_knowledge_doc`、`law_knowledge_chunk`（知识库，含 ngram 全文索引，缺失插件时自动降级）；
+3. 新建 `law_private_file`、`law_contract_review`（私有文件与合同审查）；
+4. 新建 `law_document_draft`（法律文书草稿）；
+5. 菜单 `2000 ~ 2026` 的 upsert（前台 17 项、后台 10 项）与角色授权（超级管理员全部、普通咨询角色仅前台）。
 
-QQ群： [![加入QQ群](https://img.shields.io/badge/已满-937441-blue.svg)](https://jq.qq.com/?_wv=1027&k=5bVB1og) [![加入QQ群](https://img.shields.io/badge/已满-887144332-blue.svg)](https://jq.qq.com/?_wv=1027&k=5eiA4DH) [![加入QQ群](https://img.shields.io/badge/已满-180251782-blue.svg)](https://jq.qq.com/?_wv=1027&k=5AxMKlC) [![加入QQ群](https://img.shields.io/badge/已满-104180207-blue.svg)](https://jq.qq.com/?_wv=1027&k=51G72yr) [![加入QQ群](https://img.shields.io/badge/已满-186866453-blue.svg)](https://jq.qq.com/?_wv=1027&k=VvjN2nvu) [![加入QQ群](https://img.shields.io/badge/已满-201396349-blue.svg)](https://jq.qq.com/?_wv=1027&k=5vYAqA05) [![加入QQ群](https://img.shields.io/badge/已满-101456076-blue.svg)](https://jq.qq.com/?_wv=1027&k=kOIINEb5) [![加入QQ群](https://img.shields.io/badge/已满-101539465-blue.svg)](https://jq.qq.com/?_wv=1027&k=UKtX5jhs) [![加入QQ群](https://img.shields.io/badge/已满-264312783-blue.svg)](https://jq.qq.com/?_wv=1027&k=EI9an8lJ) [![加入QQ群](https://img.shields.io/badge/已满-167385320-blue.svg)](https://jq.qq.com/?_wv=1027&k=SWCtLnMz) [![加入QQ群](https://img.shields.io/badge/已满-104748341-blue.svg)](https://jq.qq.com/?_wv=1027&k=96Dkdq0k) [![加入QQ群](https://img.shields.io/badge/已满-160110482-blue.svg)](https://jq.qq.com/?_wv=1027&k=0fsNiYZt) [![加入QQ群](https://img.shields.io/badge/已满-170801498-blue.svg)](https://jq.qq.com/?_wv=1027&k=7xw4xUG1) [![加入QQ群](https://img.shields.io/badge/已满-108482800-blue.svg)](https://jq.qq.com/?_wv=1027&k=eCx8eyoJ) [![加入QQ群](https://img.shields.io/badge/已满-101046199-blue.svg)](https://jq.qq.com/?_wv=1027&k=SpyH2875) [![加入QQ群](https://img.shields.io/badge/已满-136919097-blue.svg)](https://jq.qq.com/?_wv=1027&k=tKEt51dz) [![加入QQ群](https://img.shields.io/badge/已满-143961921-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=0vBbSb0ztbBgVtn3kJS-Q4HUNYwip89G&authKey=8irq5PhutrZmWIvsUsklBxhj57l%2F1nOZqjzigkXZVoZE451GG4JHPOqW7AW6cf0T&noverify=0&group_code=143961921) [![加入QQ群](https://img.shields.io/badge/已满-174951577-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=ZFAPAbp09S2ltvwrJzp7wGlbopsc0rwi&authKey=HB2cxpxP2yspk%2Bo3WKTBfktRCccVkU26cgi5B16u0KcAYrVu7sBaE7XSEqmMdFQp&noverify=0&group_code=174951577) [![加入QQ群](https://img.shields.io/badge/已满-161281055-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=Fn2aF5IHpwsy8j6VlalNJK6qbwFLFHat&authKey=uyIT%2B97x2AXj3odyXpsSpVaPMC%2Bidw0LxG5MAtEqlrcBcWJUA%2FeS43rsF1Tg7IRJ&noverify=0&group_code=161281055) [![加入QQ群](https://img.shields.io/badge/已满-138988063-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=XIzkm_mV2xTsUtFxo63bmicYoDBA6Ifm&authKey=dDW%2F4qsmw3x9govoZY9w%2FoWAoC4wbHqGal%2BbqLzoS6VBarU8EBptIgPKN%2FviyC8j&noverify=0&group_code=138988063) [![加入QQ群](https://img.shields.io/badge/已满-151450850-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=DkugnCg68PevlycJSKSwjhFqfIgrWWwR&authKey=pR1Pa5lPIeGF%2FFtIk6d%2FGB5qFi0EdvyErtpQXULzo03zbhopBHLWcuqdpwY241R%2F&noverify=0&group_code=151450850) [![加入QQ群](https://img.shields.io/badge/已满-224622315-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=F58bgRa-Dp-rsQJThiJqIYv8t4-lWfXh&authKey=UmUs4CVG5OPA1whvsa4uSespOvyd8%2FAr9olEGaWAfdLmfKQk%2FVBp2YU3u2xXXt76&noverify=0&group_code=224622315) [![加入QQ群](https://img.shields.io/badge/已满-287842588-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=Nxb2EQ5qozWa218Wbs7zgBnjLSNk_tVT&authKey=obBKXj6SBKgrFTJZx0AqQnIYbNOvBB2kmgwWvGhzxR67RoRr84%2Bus5OadzMcdJl5&noverify=0&group_code=287842588) [![加入QQ群](https://img.shields.io/badge/已满-187944233-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=numtK1M_I4eVd2Gvg8qtbuL8JgX42qNh&authKey=giV9XWMaFZTY%2FqPlmWbkB9g3fi0Ev5CwEtT9Tgei0oUlFFCQLDp4ozWRiVIzubIm&noverify=0&group_code=187944233) [![加入QQ群](https://img.shields.io/badge/已满-228578329-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=G6r5KGCaa3pqdbUSXNIgYloyb8e0_L0D&authKey=4w8tF1eGW7%2FedWn%2FHAypQksdrML%2BDHolQSx7094Agm7Luakj9EbfPnSTxSi2T1LQ&noverify=0&group_code=228578329) [![加入QQ群](https://img.shields.io/badge/已满-191164766-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=GsOo-OLz53J8y_9TPoO6XXSGNRTgbFxA&authKey=R7Uy%2Feq%2BZsoKNqHvRKhiXpypW7DAogoWapOawUGHokJSBIBIre2%2FoiAZeZBSLuBc&noverify=0&group_code=191164766) [![加入QQ群](https://img.shields.io/badge/已满-174569686-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=PmYavuzsOthVqfdAPbo4uAeIbu7Ttjgc&authKey=p52l8%2FXa4PS1JcEmS3VccKSwOPJUZ1ZfQ69MEKzbrooNUljRtlKjvsXf04bxNp3G&noverify=0&group_code=174569686) [![加入QQ群](https://img.shields.io/badge/已满-127358632-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=M9y5NjAl44lAL_Vh2crmEehZU_PMU6KS&authKey=ZSDz8hEREWSaPuxQV3gEwqGIaGjfRNnkB4rJjf0IvXhrSUGSGwQFmBA%2Boe8HFxyl&noverify=0&group_code=127358632) [![加入QQ群](https://img.shields.io/badge/113071109-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=UGnoqRcFRxUaX-JAUNrSDbPimKrllp4x&authKey=Bbzf8Bc0XaQhq5c4QOg46Uqngd%2FvtIixrLvCM1EkPf41diqKXKZqXVwAxHTxJ8R1&noverify=0&group_code=113071109) 点击按钮入群。
+首次启动且 `law_knowledge_doc` 为空时，`KnowledgeSeedInitializer` 会自动导入 `ruoyi-lawyer/src/main/resources/knowledge/seed/` 下的 5 份内置法规（共 144 个切片）。如需关闭自动导入，设置 `lawyer.knowledge.seed-enabled=false`。
+
+> 历史库如需清理若依演示菜单，可另行执行 `sql/upgrade_trim_ruoyi.sql`、`sql/upgrade_trim_admin_ui.sql`、`sql/upgrade_user_home_permissions.sql`；新库无需执行。
+
+### 3. 环境变量
+
+后端配置位于 `ruoyi-admin/src/main/resources/application.yml` 与 `application-druid.yml`。生产环境请通过环境变量覆盖，不要把密钥写入仓库：
+
+| 变量 | 说明 | 默认/示例 |
+| :--- | :--- | :--- |
+| `LAWYER_AI_BASE_URL` | OpenAI 兼容服务地址（需带版本段） | `https://your-host/v1` |
+| `LAWYER_AI_API_KEY` | 模型服务密钥 | 必填 |
+| `LAWYER_AI_MODEL` | 模型名 | `global:deepseek-v4.1-flash-sg` |
+| `LAWYER_AI_CONNECT_TIMEOUT` | 建连超时（毫秒） | `5000` |
+| `LAWYER_AI_REQUEST_TIMEOUT` | 同步请求超时（毫秒） | `60000` |
+| `LAWYER_AI_STREAM_TIMEOUT` | 流式总超时（毫秒） | `100000` |
+| `LAWYER_AI_LONG_REQUEST_TIMEOUT` | 合同审查/文书生成超时（毫秒） | `120000` |
+| `LAWYER_STORAGE_ROOT` | 私有文件根目录 | `./data/lawyer-files` |
+| `RUOYI_PROFILE` | 若依通用上传目录 | `./data/uploadPath` |
+
+数据库与 Redis 连接在 `application-druid.yml` / `application.yml` 中配置，部署时请替换为实际地址和强密码。Redis 同时用于登录令牌、配置缓存和会话生成锁。
+
+### 4. 启动后端
+
+```bash
+# 离线构建（跳过测试）
+mvn -o -pl ruoyi-admin -am -DskipTests package
+
+# 启动，默认端口 8989
+java -jar ruoyi-admin/target/ruoyi-admin.jar
+
+# 开发环境可启用 Swagger
+java -jar ruoyi-admin/target/ruoyi-admin.jar --spring.profiles.active=druid,dev
+```
+
+健康检查：`GET http://localhost:8989/captchaImage`。
+
+### 5. 启动前端
+
+```bash
+cd ruoyi-ui
+npm install
+npm run dev          # 默认 http://localhost:80，/dev-api 代理到 http://localhost:8989
+npm run build:prod   # 生产构建，输出 dist/
+```
+
+前端开发代理配置见 `ruoyi-ui/vite.config.js`，如后端地址不同请同步修改 `baseUrl`。
+
+## 接口一览
+
+| 方法 | 路径 | 说明 | 权限 |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/lawyer/sessions` | 新建咨询会话 | `lawyer:session:add` |
+| `GET` | `/lawyer/sessions` | 本人会话分页 | `lawyer:session:list` |
+| `DELETE` | `/lawyer/sessions/{id}` | 删除本人会话 | `lawyer:session:remove` |
+| `GET` | `/lawyer/sessions/{id}/messages` | 历史消息 | `lawyer:chat:query` |
+| `POST` | `/lawyer/sessions/{id}/messages` | 同步问答（降级） | `lawyer:chat:send` |
+| `POST` | `/lawyer/sessions/{id}/messages/stream` | SSE 流式问答 | `lawyer:chat:send` |
+| `GET` | `/lawyer/knowledge/docs` | 知识库法规分页 | `lawyer:knowledge:list` |
+| `GET` | `/lawyer/knowledge/docs/search?q=` | 法条检索调试 | `lawyer:knowledge:query` |
+| `POST` | `/lawyer/files/upload` | 上传私有文件 | `lawyer:file:access` |
+| `GET` | `/lawyer/files/{id}/download` | 鉴权下载私有文件 | `lawyer:file:access` |
+| `POST` | `/lawyer/contracts/reviews` | 发起合同审查 | `lawyer:contract:add` |
+| `GET` | `/lawyer/contracts/reviews` | 本人审查记录 | `lawyer:contract:list` |
+| `GET` | `/lawyer/contracts/reviews/{id}` | 审查详情 | `lawyer:contract:query` |
+| `GET` | `/lawyer/documents/templates` | 文书模板列表 | `lawyer:document:list` |
+| `POST` | `/lawyer/documents/drafts` | 创建文书草稿 | `lawyer:document:add` |
+| `PUT` | `/lawyer/documents/drafts/{id}` | 编辑草稿 | `lawyer:document:edit` |
+| `GET` | `/lawyer/documents/drafts/{id}/export-docx` | 导出标准 DOCX | `lawyer:document:export` |
+| `GET` | `/lawyer/admin/sessions` | 后台会话审计 | `lawyer:manage:list` |
+| `GET` | `/lawyer/admin/sessions/{id}/messages` | 后台消息审计 | `lawyer:manage:query` |
+
+SSE 事件约定：
+
+- `meta`：`requestId`、`sessionId`、用户/助手消息 ID、`replay`；
+- `citation`：本次检索命中的法条引用列表（含法规名、条号、片段、得分）；
+- `delta`：增量正文；
+- `done`：最终状态、消息 ID、模型名、完整正文与引用；
+- `error`：可读错误码与提示。
+
+## 构建与测试
+
+```bash
+# 全量离线构建
+mvn -o -pl ruoyi-admin -am -DskipTests package
+
+# 律师模块单元测试（97 项）
+mvn -o -pl ruoyi-lawyer -am test -DskipTests=false
+```
+
+V1.0 验收结果：构建成功，97 项单元测试全部通过（0 失败、0 错误、0 跳过）。完整清单与端到端实测证据见 [`doc/V1.0_ACCEPTANCE_REPORT.md`](doc/V1.0_ACCEPTANCE_REPORT.md)。
+
+## 文档
+
+- [V1.0 验收报告](doc/V1.0_ACCEPTANCE_REPORT.md)
+- [AI 律师助手端到端跑通计划](doc/AI律师助手端到端跑通计划.md)
+- [AI 律师助手雏形设计方案](doc/AI律师助手雏形设计方案.md)
+- [阶段 0 环境诊断](doc/PHASE0_DIAGNOSIS.md)
+
+## 致谢与许可
+
+本项目基于 [RuoYi-Vue](https://gitee.com/y_project/RuoYi-Vue) 二次开发，遵循 MIT License。感谢若依开源社区。

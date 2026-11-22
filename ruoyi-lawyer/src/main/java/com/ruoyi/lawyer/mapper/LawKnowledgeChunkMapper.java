@@ -45,6 +45,17 @@ public interface LawKnowledgeChunkMapper
     int updateChunk(LawKnowledgeChunk chunk);
 
     /**
+     * 更新单个切片的向量与模型标识
+     *
+     * @param id 切片ID
+     * @param embeddingJson 归一化向量 JSON 数组
+     * @param embeddingModel 生成向量的模型标识
+     * @return 影响行数
+     */
+    int updateChunkEmbedding(@Param("id") Long id, @Param("embeddingJson") String embeddingJson,
+            @Param("embeddingModel") String embeddingModel);
+
+    /**
      * 删除单个切片（同时校验所属文档）
      *
      * @param id 切片ID

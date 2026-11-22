@@ -8,6 +8,7 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,24 +23,33 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import com.alibaba.fastjson2.JSON;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.lawyer.client.AiEmbeddingClient;
+import com.ruoyi.lawyer.client.EmbeddingStatus;
+import com.ruoyi.lawyer.client.HttpAiEmbeddingClient;
+import com.ruoyi.lawyer.config.LawyerKnowledgeProperties;
 import com.ruoyi.lawyer.domain.LawKnowledgeChunk;
 import com.ruoyi.lawyer.domain.LawKnowledgeDoc;
 import com.ruoyi.lawyer.dto.KnowledgeChunkRequest;
 import com.ruoyi.lawyer.dto.KnowledgeDocRequest;
 import com.ruoyi.lawyer.dto.KnowledgeRechunkRequest;
+import com.ruoyi.lawyer.dto.KnowledgeSearchDebugRequest;
 import com.ruoyi.lawyer.mapper.LawKnowledgeChunkMapper;
 import com.ruoyi.lawyer.mapper.LawKnowledgeDocMapper;
 import com.ruoyi.lawyer.retrieval.ArticleSplitter;
 import com.ruoyi.lawyer.retrieval.ChineseNumberUtils;
 import com.ruoyi.lawyer.retrieval.KnowledgeRetriever;
+import com.ruoyi.lawyer.retrieval.QueryRewriteResult;
+import com.ruoyi.lawyer.retrieval.QueryRewriter;
 import com.ruoyi.lawyer.service.ILawKnowledgeService;
 import com.ruoyi.lawyer.vo.CitationVO;
 import com.ruoyi.lawyer.vo.KnowledgeChunkVO;
 import com.ruoyi.lawyer.vo.KnowledgeDocVO;
+import com.ruoyi.lawyer.vo.KnowledgeSearchDebugVO;
 
 /**
  * 法律知识库 业务层实现
@@ -64,6 +74,12 @@ public class LawKnowledgeServiceImpl implements ILawKnowledgeService
     /** 批量插入切片的分批大小 */
     private static final int BATCH_SIZE = 200;
 
+    /** 单次向量请求的分片大小 */
+    private static final int EMBEDDING_BATCH_SIZE = 32;
+
+    /** 合法检索模式 */
+    private static final Set<String> RETRIEVAL_MODES = Set.of("bm25", "vector", "hybrid_rrf");
+
     /** 查询文本最大长度 */
     private static final int MAX_QUERY_CHARS = 500;
 
@@ -75,6 +91,15 @@ public class LawKnowledgeServiceImpl implements ILawKnowledgeService
 
     @Autowired
     private KnowledgeRetriever knowledgeRetriever;
+
+    @Autowired(required = false)
+    private QueryRewriter queryRewriter;
+
+    @Autowired(required = false)
+    private AiEmbeddingClient aiEmbeddingClient;
+
+    @Autowired
+    private LawyerKnowledgeProperties knowledgeProperties;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -263,6 +288,7 @@ public class LawKnowledgeServiceImpl implements ILawKnowledgeService
         chunk.setContent(request.getContent().trim());
         chunk.setKeywords(trimToNull(request.getKeywords()));
         chunk.setTokenCount(chunk.getContent().length());
+        applyEmbedding(chunk);
         chunkMapper.updateChunk(chunk);
         knowledgeRetriever.invalidate();
     }
@@ -282,16 +308,260 @@ public class LawKnowledgeServiceImpl implements ILawKnowledgeService
     @Override
     public List<CitationVO> search(String query, Integer topK)
     {
+        String text = validateQuery(query);
+        return knowledgeRetriever.search(text, topK);
+    }
+
+    @Override
+    public List<CitationVO> search(String query, Integer topK, String mode)
+    {
+        String text = validateQuery(query);
+        return knowledgeRetriever.search(text, topK, normalizeMode(mode), null);
+    }
+
+    @Override
+    public KnowledgeSearchDebugVO searchDebug(KnowledgeSearchDebugRequest request)
+    {
+        if (request == null)
+        {
+            throw new ServiceException("请求参数不能为空", 422);
+        }
+        String query = validateQuery(request.getQuery());
+        int limit = request.getTopK() == null || request.getTopK() < 1 ? 4 : Math.min(request.getTopK(), 10);
+        String mode = normalizeMode(request.getMode());
+
+        QueryRewriteResult rewrite = QueryRewriteResult.passthrough(query, 0L);
+        if (queryRewriter != null)
+        {
+            QueryRewriteResult result = queryRewriter.rewriteWithContext(query, request.getHistoryContext());
+            if (result != null && StringUtils.isNotBlank(result.getRewrittenQuery()))
+            {
+                rewrite = result;
+            }
+        }
+        String searchQuery = StringUtils.isBlank(rewrite.getRewrittenQuery()) ? query : rewrite.getRewrittenQuery();
+
+        List<CitationVO> bm25Results = knowledgeRetriever.search(searchQuery, limit, "bm25", null);
+        List<CitationVO> vectorResults = knowledgeRetriever.search(searchQuery, limit, "vector", null);
+        List<CitationVO> hybridResults = knowledgeRetriever.search(searchQuery, limit, "hybrid_rrf", null);
+
+        KnowledgeSearchDebugVO vo = new KnowledgeSearchDebugVO();
+        vo.setOriginalQuery(query);
+        vo.setRewrittenQuery(searchQuery);
+        vo.setRewritten(rewrite.isRewritten());
+        vo.setRewriteStrategy(rewrite.getStrategy());
+        vo.setRewriteLatencyMs(rewrite.getLatencyMs());
+        vo.setMode(mode);
+        vo.setEmbeddingStatus(resolveEmbeddingStatus());
+        vo.setBm25Results(bm25Results);
+        vo.setVectorResults(vectorResults);
+        vo.setHybridResults(hybridResults);
+        vo.setCitations(switch (mode)
+        {
+            case "bm25" -> bm25Results;
+            case "vector" -> vectorResults;
+            default -> hybridResults;
+        });
+        return vo;
+    }
+
+    @Override
+    public Map<String, Object> rebuildEmbeddings(Long docId)
+    {
+        long start = System.currentTimeMillis();
+        List<LawKnowledgeDoc> docs;
+        if (docId != null)
+        {
+            LawKnowledgeDoc doc = docMapper.selectDocById(docId);
+            if (doc == null)
+            {
+                throw new ServiceException("法规不存在");
+            }
+            docs = Collections.singletonList(doc);
+        }
+        else
+        {
+            docs = docMapper.selectEnabledDocs();
+        }
+        List<Long> docIds = new ArrayList<>();
+        if (docs != null)
+        {
+            for (LawKnowledgeDoc doc : docs)
+            {
+                if (doc != null && doc.getId() != null && "0".equals(doc.getStatus()))
+                {
+                    docIds.add(doc.getId());
+                }
+            }
+        }
+        List<LawKnowledgeChunk> chunks = docIds.isEmpty() ? new ArrayList<>()
+                : chunkMapper.selectChunksByDocIds(docIds);
+        if (chunks == null)
+        {
+            chunks = new ArrayList<>();
+        }
+
+        int totalChunks = chunks.size();
+        int updatedChunks = 0;
+        int skippedChunks = 0;
+        if (aiEmbeddingClient == null)
+        {
+            skippedChunks = totalChunks;
+        }
+        else
+        {
+            // 主动清除 403/404 冷却，重新探测远端网关
+            if (aiEmbeddingClient instanceof HttpAiEmbeddingClient httpClient)
+            {
+                httpClient.resetCooldown();
+            }
+            for (int startIndex = 0; startIndex < chunks.size(); startIndex += EMBEDDING_BATCH_SIZE)
+            {
+                List<LawKnowledgeChunk> batch = chunks.subList(startIndex,
+                        Math.min(startIndex + EMBEDDING_BATCH_SIZE, chunks.size()));
+                List<String> texts = new ArrayList<>(batch.size());
+                for (LawKnowledgeChunk chunk : batch)
+                {
+                    texts.add(embeddingText(chunk));
+                }
+                List<float[]> vectors;
+                try
+                {
+                    vectors = aiEmbeddingClient.embedBatch(texts);
+                }
+                catch (Exception e)
+                {
+                    log.warn("切片向量批量生成失败: {}", e.getMessage());
+                    vectors = null;
+                }
+                for (int i = 0; i < batch.size(); i++)
+                {
+                    float[] vector = vectors == null || i >= vectors.size() ? null : vectors.get(i);
+                    if (vector == null || vector.length == 0)
+                    {
+                        skippedChunks++;
+                        continue;
+                    }
+                    LawKnowledgeChunk chunk = batch.get(i);
+                    chunkMapper.updateChunkEmbedding(chunk.getId(), JSON.toJSONString(vector),
+                            aiEmbeddingClient.currentModel());
+                    updatedChunks++;
+                }
+            }
+        }
+        knowledgeRetriever.invalidate();
+
+        EmbeddingStatus status = resolveEmbeddingStatus();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalChunks", totalChunks);
+        result.put("updatedChunks", updatedChunks);
+        result.put("skippedChunks", skippedChunks);
+        result.put("model", aiEmbeddingClient == null ? null : aiEmbeddingClient.currentModel());
+        result.put("embeddingMode", status.getMode());
+        result.put("durationMs", System.currentTimeMillis() - start);
+        log.info("知识库向量重建完成, docId={}, total={}, updated={}, skipped={}", docId, totalChunks,
+                updatedChunks, skippedChunks);
+        return result;
+    }
+
+    private String validateQuery(String query)
+    {
         if (StringUtils.isBlank(query))
         {
-            return new ArrayList<>();
+            throw new ServiceException("查询内容不能为空", 422);
         }
         String text = query.trim();
         if (text.length() > MAX_QUERY_CHARS)
         {
             throw new ServiceException("查询内容不能超过500个字符", 422);
         }
-        return knowledgeRetriever.search(text, topK);
+        return text;
+    }
+
+    private String normalizeMode(String mode)
+    {
+        if (mode != null && RETRIEVAL_MODES.contains(mode))
+        {
+            return mode;
+        }
+        String configured = knowledgeProperties == null ? null : knowledgeProperties.getMode();
+        return configured != null && RETRIEVAL_MODES.contains(configured) ? configured : "hybrid_rrf";
+    }
+
+    private EmbeddingStatus resolveEmbeddingStatus()
+    {
+        if (aiEmbeddingClient == null)
+        {
+            return new EmbeddingStatus("disabled", null, 0, false, false, "CLIENT_NOT_CONFIGURED",
+                    "Embedding 客户端未注入");
+        }
+        EmbeddingStatus status = aiEmbeddingClient.getStatus();
+        return status == null ? new EmbeddingStatus("disabled", null, 0, false, false, null, null) : status;
+    }
+
+    /**
+     * 为切片批量生成向量并写入实体（失败只记 warn，不阻断入库）
+     */
+    private void applyEmbeddings(List<LawKnowledgeChunk> chunks)
+    {
+        if (aiEmbeddingClient == null || chunks == null || chunks.isEmpty())
+        {
+            return;
+        }
+        List<String> texts = new ArrayList<>(chunks.size());
+        for (LawKnowledgeChunk chunk : chunks)
+        {
+            texts.add(embeddingText(chunk));
+        }
+        try
+        {
+            List<float[]> vectors = aiEmbeddingClient.embedBatch(texts);
+            String model = aiEmbeddingClient.currentModel();
+            for (int i = 0; i < chunks.size(); i++)
+            {
+                float[] vector = vectors == null || i >= vectors.size() ? null : vectors.get(i);
+                if (vector != null && vector.length > 0)
+                {
+                    chunks.get(i).setEmbeddingJson(JSON.toJSONString(vector));
+                    chunks.get(i).setEmbeddingModel(model);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            log.warn("切片向量生成失败，本次保存不含向量: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 单条切片生成向量，异常不阻断保存
+     */
+    private void applyEmbedding(LawKnowledgeChunk chunk)
+    {
+        if (aiEmbeddingClient == null || chunk == null)
+        {
+            return;
+        }
+        try
+        {
+            float[] vector = aiEmbeddingClient.embed(embeddingText(chunk));
+            if (vector != null && vector.length > 0)
+            {
+                chunk.setEmbeddingJson(JSON.toJSONString(vector));
+                chunk.setEmbeddingModel(aiEmbeddingClient.currentModel());
+            }
+        }
+        catch (Exception e)
+        {
+            log.warn("切片向量生成失败，本次保存不含向量: {}", e.getMessage());
+        }
+    }
+
+    private String embeddingText(LawKnowledgeChunk chunk)
+    {
+        String content = chunk.getContent() == null ? "" : chunk.getContent();
+        String keywords = chunk.getKeywords() == null ? "" : chunk.getKeywords();
+        return content + " " + keywords;
     }
 
     private void validateDocRequest(KnowledgeDocRequest request)
@@ -363,12 +633,14 @@ public class LawKnowledgeServiceImpl implements ILawKnowledgeService
             total++;
             if (batch.size() >= BATCH_SIZE)
             {
+                applyEmbeddings(batch);
                 chunkMapper.batchInsertChunks(batch);
                 batch = new ArrayList<>(BATCH_SIZE);
             }
         }
         if (!batch.isEmpty())
         {
+            applyEmbeddings(batch);
             chunkMapper.batchInsertChunks(batch);
         }
         log.info("法规切分完成, docId={}, chunks={}", docId, total);

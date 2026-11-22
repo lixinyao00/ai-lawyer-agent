@@ -14,13 +14,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="errorCode"    column="error_code"    />
         <result property="modelName"    column="model_name"    />
         <result property="citationsJson" column="citations_json" />
+        <result property="rewrittenQuery" column="rewritten_query" />
+        <result property="retrievalMode" column="retrieval_mode" />
         <result property="createTime"   column="create_time"   />
         <result property="updateTime"   column="update_time"   />
     </resultMap>
 
     <sql id="selectMessageVo">
         select id, session_id, request_id, role, content, status, error_code, model_name, citations_json,
-               create_time, update_time
+               rewritten_query, retrieval_mode, create_time, update_time
         from law_chat_message
     </sql>
 
@@ -79,6 +81,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             status     = #{status},
             error_code = #{errorCode},
             model_name = #{modelName},
+            rewritten_query = #{rewrittenQuery},
+            retrieval_mode = #{retrievalMode},
             update_time = #{updateTime}
         where id = #{id}
           and status = 'pending'

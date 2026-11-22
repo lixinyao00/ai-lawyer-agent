@@ -38,6 +38,8 @@ import com.ruoyi.lawyer.dto.SendMessageRequest;
 import com.ruoyi.lawyer.mapper.LawChatMessageMapper;
 import com.ruoyi.lawyer.mapper.LawChatSessionMapper;
 import com.ruoyi.lawyer.retrieval.KnowledgeRetriever;
+import com.ruoyi.lawyer.retrieval.QueryRewriteResult;
+import com.ruoyi.lawyer.retrieval.QueryRewriter;
 import com.ruoyi.lawyer.service.ILawChatService;
 import com.ruoyi.lawyer.support.ChatMessageConverter;
 import com.ruoyi.lawyer.support.ContextTrimmer;
@@ -104,6 +106,10 @@ public class LawChatServiceImpl implements ILawChatService
 
     @Autowired
     private KnowledgeRetriever knowledgeRetriever;
+
+    /** 多轮指代改写器；为 null 时回退 V1.0 短问题拼接逻辑 */
+    @Autowired(required = false)
+    private QueryRewriter queryRewriter;
 
     @Autowired
     private LawSessionLockService lockService;
@@ -182,13 +188,16 @@ public class LawChatServiceImpl implements ILawChatService
 
             // 在本轮消息入库之前读取历史，避免把当前问题重复带入上下文
             List<AiChatClient.ChatMessage> history = loadHistory(sessionId);
-            List<CitationVO> citations = retrieveCitations(content, history);
+            RetrievalOutcome retrieval = retrieveCitations(content, history);
+            List<CitationVO> citations = retrieval.citations;
 
             Date now = new Date();
             LawChatMessage userMessage = buildMessage(sessionId, requestId, ROLE_USER, content, STATUS_SUCCESS, now);
             LawChatMessage assistantMessage = buildMessage(sessionId, requestId, ROLE_ASSISTANT, "",
                     STATUS_PENDING, now);
             assistantMessage.setCitationsJson(serializeCitations(citations));
+            assistantMessage.setRewrittenQuery(retrieval.rewrittenQuery);
+            assistantMessage.setRetrievalMode(retrieval.retrievalMode);
 
             try
             {
@@ -272,13 +281,16 @@ public class LawChatServiceImpl implements ILawChatService
 
             convergeStalePending(sessionId);
             List<AiChatClient.ChatMessage> history = loadHistory(sessionId);
-            List<CitationVO> citations = retrieveCitations(content, history);
+            RetrievalOutcome retrieval = retrieveCitations(content, history);
+            List<CitationVO> citations = retrieval.citations;
 
             Date now = new Date();
             LawChatMessage userMessage = buildMessage(sessionId, requestId, ROLE_USER, content, STATUS_SUCCESS, now);
             LawChatMessage assistantMessage = buildMessage(sessionId, requestId, ROLE_ASSISTANT, "",
                     STATUS_PENDING, now);
             assistantMessage.setCitationsJson(serializeCitations(citations));
+            assistantMessage.setRewrittenQuery(retrieval.rewrittenQuery);
+            assistantMessage.setRetrievalMode(retrieval.retrievalMode);
 
             try
             {
@@ -297,8 +309,8 @@ public class LawChatServiceImpl implements ILawChatService
             String sessionTitle = resolveSessionTitle(lockedSession, content);
             SseEmitter emitter = new SseEmitter(chatProperties.getSseTimeout());
             StreamContext context = new StreamContext(sessionId, requestId, sessionTitle,
-                    userMessage.getId(), assistantMessage.getId(), history, content, citations,
-                    new SseEventWriter(emitter, objectMapper), token);
+                    userMessage.getId(), assistantMessage.getId(), history, content, retrieval.rewrittenQuery,
+                    retrieval.retrievalMode, citations, new SseEventWriter(emitter, objectMapper), token);
 
             // 客户端断开 / 超时 / 完成时置取消标志，通知模型读取停止
             emitter.onCompletion(context::cancel);
@@ -382,7 +394,7 @@ public class LawChatServiceImpl implements ILawChatService
 
             markAssistantResult(assistantMessage, STATUS_SUCCESS, answer, null, aiProperties.getModel());
             context.writer.send("done", doneData(STATUS_SUCCESS, assistantMessage.getId(), aiProperties.getModel(),
-                    answer, context.citations));
+                    answer, context.citations, context.rewrittenQuery, context.retrievalMode));
             context.writer.complete();
         }
         catch (ClientAbortedException e)
@@ -485,13 +497,17 @@ public class LawChatServiceImpl implements ILawChatService
             meta.put("assistantMessageId", assistantMessageId);
             meta.put("sessionTitle", title);
             meta.put("replay", true);
+            meta.put("rewrittenQuery", assistantMessage == null ? null : assistantMessage.getRewrittenQuery());
+            meta.put("retrievalMode", assistantMessage == null ? null : assistantMessage.getRetrievalMode());
             writer.send("meta", meta);
 
             sendCitation(writer, citations);
 
             if (assistantMessage == null || STATUS_PENDING.equals(assistantMessage.getStatus()))
             {
-                writer.send("done", doneData(STATUS_PENDING, assistantMessageId, null, "", citations));
+                writer.send("done", doneData(STATUS_PENDING, assistantMessageId, null, "", citations,
+                        assistantMessage == null ? null : assistantMessage.getRewrittenQuery(),
+                        assistantMessage == null ? null : assistantMessage.getRetrievalMode()));
             }
             else if (STATUS_SUCCESS.equals(assistantMessage.getStatus()))
             {
@@ -499,7 +515,8 @@ public class LawChatServiceImpl implements ILawChatService
                 delta.put("content", assistantMessage.getContent() == null ? "" : assistantMessage.getContent());
                 writer.send("delta", delta);
                 writer.send("done", doneData(STATUS_SUCCESS, assistantMessageId, assistantMessage.getModelName(),
-                        assistantMessage.getContent() == null ? "" : assistantMessage.getContent(), citations));
+                        assistantMessage.getContent() == null ? "" : assistantMessage.getContent(), citations,
+                        assistantMessage.getRewrittenQuery(), assistantMessage.getRetrievalMode()));
             }
             else
             {
@@ -531,6 +548,8 @@ public class LawChatServiceImpl implements ILawChatService
         meta.put("assistantMessageId", context.assistantMessageId);
         meta.put("sessionTitle", context.sessionTitle);
         meta.put("replay", replay);
+        meta.put("rewrittenQuery", context.rewrittenQuery);
+        meta.put("retrievalMode", context.retrievalMode);
         return meta;
     }
 
@@ -538,7 +557,7 @@ public class LawChatServiceImpl implements ILawChatService
      * done 事件数据
      */
     private Map<String, Object> doneData(String status, Long assistantMessageId, String modelName, String content,
-            List<CitationVO> citations)
+            List<CitationVO> citations, String rewrittenQuery, String retrievalMode)
     {
         Map<String, Object> done = new LinkedHashMap<>();
         done.put("status", status);
@@ -546,6 +565,8 @@ public class LawChatServiceImpl implements ILawChatService
         done.put("modelName", modelName);
         done.put("content", content);
         done.put("citations", citations == null ? Collections.emptyList() : citations);
+        done.put("rewrittenQuery", rewrittenQuery);
+        done.put("retrievalMode", retrievalMode);
         return done;
     }
 
@@ -679,16 +700,39 @@ public class LawChatServiceImpl implements ILawChatService
     }
 
     /**
-     * 检索本次问题相关法条；短问题拼接上一条用户问题，异常不阻断聊天
+     * 检索本次问题相关法条；优先使用 QueryRewriter 改写多轮指代追问，
+     * 未注入改写器时回退 V1.0 的“短问题拼接上一条用户问题”逻辑。异常不阻断聊天。
      */
-    private List<CitationVO> retrieveCitations(String content, List<AiChatClient.ChatMessage> history)
+    private RetrievalOutcome retrieveCitations(String content, List<AiChatClient.ChatMessage> history)
     {
+        RetrievalOutcome outcome = new RetrievalOutcome();
+        outcome.citations = new ArrayList<>();
+        outcome.query = content;
         if (!knowledgeProperties.isEnabled())
         {
-            return new ArrayList<>();
+            return outcome;
         }
         String query = content;
-        if (content.length() < 30)
+        if (queryRewriter != null)
+        {
+            try
+            {
+                QueryRewriteResult rewrite = queryRewriter.rewrite(content, history);
+                if (rewrite != null && StringUtils.isNotEmpty(rewrite.getRewrittenQuery()))
+                {
+                    query = rewrite.getRewrittenQuery();
+                    if (rewrite.isRewritten())
+                    {
+                        outcome.rewrittenQuery = rewrite.getRewrittenQuery();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                log.warn("Query 改写失败，使用原始问题检索: {}", e.getMessage());
+            }
+        }
+        else if (content.length() < 30)
         {
             String previous = lastUserContent(history);
             if (StringUtils.isNotEmpty(previous))
@@ -696,16 +740,34 @@ public class LawChatServiceImpl implements ILawChatService
                 query = previous + " " + content;
             }
         }
+        outcome.query = query;
         try
         {
             List<CitationVO> citations = knowledgeRetriever.search(query, knowledgeProperties.getTopK());
-            return citations == null ? new ArrayList<>() : citations;
+            outcome.citations = citations == null ? new ArrayList<>() : citations;
+            outcome.retrievalMode = resolveRetrievalMode(outcome.citations);
         }
         catch (Exception e)
         {
             log.warn("法条检索失败，本次不注入知识库: {}", e.getMessage());
-            return new ArrayList<>();
         }
+        return outcome;
+    }
+
+    private String resolveRetrievalMode(List<CitationVO> citations)
+    {
+        if (citations == null || citations.isEmpty())
+        {
+            return null;
+        }
+        for (CitationVO citation : citations)
+        {
+            if (citation != null && StringUtils.isNotEmpty(citation.getRetrievalMode()))
+            {
+                return citation.getRetrievalMode();
+            }
+        }
+        return "bm25";
     }
 
     private String lastUserContent(List<AiChatClient.ChatMessage> history)
@@ -998,6 +1060,10 @@ public class LawChatServiceImpl implements ILawChatService
 
         private final String content;
 
+        private final String rewrittenQuery;
+
+        private final String retrievalMode;
+
         private final List<CitationVO> citations;
 
         private final SseEventWriter writer;
@@ -1010,7 +1076,8 @@ public class LawChatServiceImpl implements ILawChatService
 
         private StreamContext(Long sessionId, String requestId, String sessionTitle, Long userMessageId,
                 Long assistantMessageId, List<AiChatClient.ChatMessage> history, String content,
-                List<CitationVO> citations, SseEventWriter writer, String token)
+                String rewrittenQuery, String retrievalMode, List<CitationVO> citations, SseEventWriter writer,
+                String token)
         {
             this.sessionId = sessionId;
             this.requestId = requestId;
@@ -1019,6 +1086,8 @@ public class LawChatServiceImpl implements ILawChatService
             this.assistantMessageId = assistantMessageId;
             this.history = history;
             this.content = content;
+            this.rewrittenQuery = rewrittenQuery;
+            this.retrievalMode = retrievalMode;
             this.citations = citations;
             this.writer = writer;
             this.token = token;
@@ -1028,6 +1097,20 @@ public class LawChatServiceImpl implements ILawChatService
         {
             cancelled.set(true);
         }
+    }
+
+    /**
+     * 本次检索结果（含改写词与实际检索模式）
+     */
+    private static final class RetrievalOutcome
+    {
+        private String query;
+
+        private String rewrittenQuery;
+
+        private String retrievalMode;
+
+        private List<CitationVO> citations = new ArrayList<>();
     }
 
     /**

@@ -40,6 +40,12 @@ public class LawChatMessage extends BaseEntity
     @JsonIgnore
     private String citationsJson;
 
+    /** 多轮指代改写后的实际检索词（仅 assistant 消息写入） */
+    private String rewrittenQuery;
+
+    /** 实际生效检索模式：bm25 / vector / hybrid_rrf */
+    private String retrievalMode;
+
     public Long getId()
     {
         return id;
@@ -128,5 +134,25 @@ public class LawChatMessage extends BaseEntity
     public void setCitationsJson(String citationsJson)
     {
         this.citationsJson = citationsJson;
+    }
+
+    public String getRewrittenQuery()
+    {
+        return rewrittenQuery;
+    }
+
+    public void setRewrittenQuery(String rewrittenQuery)
+    {
+        this.rewrittenQuery = rewrittenQuery;
+    }
+
+    public String getRetrievalMode()
+    {
+        return retrievalMode;
+    }
+
+    public void setRetrievalMode(String retrievalMode)
+    {
+        this.retrievalMode = retrievalMode;
     }
 }

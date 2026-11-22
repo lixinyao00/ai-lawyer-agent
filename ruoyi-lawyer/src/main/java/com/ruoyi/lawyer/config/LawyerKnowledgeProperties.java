@@ -33,6 +33,18 @@ public class LawyerKnowledgeProperties
     /** 是否启用内置语料自动导入 */
     private boolean seedEnabled = true;
 
+    /** 默认检索模式：bm25 | vector | hybrid_rrf */
+    private String mode = "hybrid_rrf";
+
+    /** RRF 倒数排名融合平滑常数 k */
+    private int rrfK = 60;
+
+    /** 是否启用多轮指代 Query 改写 */
+    private boolean rewriteEnabled = true;
+
+    /** LLM Query 改写超时（毫秒），超时自动降级规则实体补全 */
+    private long rewriteTimeout = 8000L;
+
     public boolean isEnabled()
     {
         return enabled;
@@ -101,5 +113,45 @@ public class LawyerKnowledgeProperties
     public void setSeedEnabled(boolean seedEnabled)
     {
         this.seedEnabled = seedEnabled;
+    }
+
+    public String getMode()
+    {
+        return mode;
+    }
+
+    public void setMode(String mode)
+    {
+        this.mode = mode;
+    }
+
+    public int getRrfK()
+    {
+        return rrfK;
+    }
+
+    public void setRrfK(int rrfK)
+    {
+        this.rrfK = rrfK;
+    }
+
+    public boolean isRewriteEnabled()
+    {
+        return rewriteEnabled;
+    }
+
+    public void setRewriteEnabled(boolean rewriteEnabled)
+    {
+        this.rewriteEnabled = rewriteEnabled;
+    }
+
+    public long getRewriteTimeout()
+    {
+        return rewriteTimeout;
+    }
+
+    public void setRewriteTimeout(long rewriteTimeout)
+    {
+        this.rewriteTimeout = rewriteTimeout;
     }
 }

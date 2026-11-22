@@ -11,21 +11,25 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="content"    column="content"     />
         <result property="keywords"   column="keywords"    />
         <result property="tokenCount" column="token_count" />
+        <result property="embeddingJson" column="embedding_json" />
+        <result property="embeddingModel" column="embedding_model" />
         <result property="createTime" column="create_time" />
         <result property="docTitle"   column="doc_title"   />
     </resultMap>
 
     <sql id="selectChunkVo">
-        select id, doc_id, article_no, content, keywords, token_count, create_time
+        select id, doc_id, article_no, content, keywords, token_count, embedding_json, embedding_model,
+               create_time
         from law_knowledge_chunk
     </sql>
 
     <insert id="batchInsertChunks">
-        insert into law_knowledge_chunk (doc_id, article_no, content, keywords, token_count, create_time)
+        insert into law_knowledge_chunk (doc_id, article_no, content, keywords, token_count,
+                                         embedding_json, embedding_model, create_time)
         values
         <foreach collection="chunks" item="chunk" separator=",">
             (#{chunk.docId}, #{chunk.articleNo}, #{chunk.content}, #{chunk.keywords},
-             #{chunk.tokenCount}, #{chunk.createTime})
+             #{chunk.tokenCount}, #{chunk.embeddingJson}, #{chunk.embeddingModel}, #{chunk.createTime})
         </foreach>
     </insert>
 
@@ -48,7 +52,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         set article_no  = #{articleNo},
             content     = #{content},
             keywords    = #{keywords},
-            token_count = #{tokenCount}
+            token_count = #{tokenCount},
+            embedding_json = #{embeddingJson},
+            embedding_model = #{embeddingModel}
+        where id = #{id}
+    </update>
+
+    <update id="updateChunkEmbedding">
+        update law_knowledge_chunk
+        set embedding_json  = #{embeddingJson},
+            embedding_model = #{embeddingModel}
         where id = #{id}
     </update>
 
@@ -72,7 +85,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <select id="selectChunksByDocIds" resultMap="LawKnowledgeChunkResult">
-        select c.id, c.doc_id, c.article_no, c.content, c.keywords, c.token_count, c.create_time,
+        select c.id, c.doc_id, c.article_no, c.content, c.keywords, c.token_count,
+               c.embedding_json, c.embedding_model, c.create_time,
                d.title as doc_title
         from law_knowledge_chunk c
         inner join law_knowledge_doc d on d.id = c.doc_id

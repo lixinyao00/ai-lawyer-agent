@@ -1910,3 +1910,932 @@ html.dark .lawyer-surface {
     width: 100%;
   }
 }
+
+
+/* =========================================================
+ * M4 法律文书起草工作台样式
+ * ========================================================= */
+.doc-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--law-bg);
+}
+
+.doc-header {
+  flex: 0 0 auto;
+  min-height: 62px;
+  padding: 8px 20px;
+}
+
+.doc-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 10px;
+}
+
+.doc-account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px 0 6px;
+  border: 1px solid var(--law-line);
+  border-radius: 999px;
+  background: var(--law-card);
+  color: var(--law-ink);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.doc-account-btn:hover {
+  background: var(--law-hover);
+  border-color: var(--law-accent);
+}
+
+.doc-account-btn .account-avatar {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--law-wash);
+  color: var(--law-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.doc-account-name {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-workspace-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.doc-sidebar {
+  flex: 0 0 300px;
+  width: 300px;
+  min-height: 0;
+  border-right: 1px solid var(--law-line);
+  background: var(--law-panel);
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-mobile-drawer .el-drawer__body {
+  padding: 0;
+  background: var(--law-panel);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 左侧历史草稿列表 */
+.doc-history {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.doc-history-head {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--law-line);
+}
+
+.doc-history-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doc-history-title-row h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 680;
+  color: var(--law-ink);
+}
+
+.doc-history-total {
+  font-size: 12px;
+  color: var(--law-muted);
+}
+
+.doc-history-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 36px 16px;
+  color: var(--law-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.doc-history-empty p {
+  margin: 0;
+}
+
+.doc-history-item {
+  padding: 10px 12px;
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-card);
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.doc-history-item:hover {
+  border-color: color-mix(in srgb, var(--law-accent) 45%, var(--law-line));
+  background: var(--law-hover);
+}
+
+.doc-history-item.is-active {
+  border-color: var(--law-accent);
+  background: var(--law-wash);
+  box-shadow: 0 1px 4px #20272014;
+}
+
+.doc-history-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.doc-history-item-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 620;
+  color: var(--law-ink);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.doc-history-delete {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--law-muted);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: color .15s ease, background .15s ease, opacity .15s ease;
+}
+
+.doc-history-item:hover .doc-history-delete,
+.doc-history-delete:focus-visible {
+  opacity: 1;
+}
+
+.doc-history-delete:hover:not(:disabled) {
+  color: var(--law-risk-high, #c9443e);
+  background: var(--law-risk-high-bg, #fdf2f2);
+}
+
+.doc-history-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.doc-history-item-time {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--law-muted);
+}
+
+.doc-history-more {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.doc-template-chip,
+.doc-model-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  background: var(--law-panel);
+  color: var(--law-muted);
+  font-size: 11.5px;
+  font-weight: 560;
+  line-height: 1.4;
+}
+
+.doc-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 640;
+  line-height: 1.4;
+  border: 1px solid transparent;
+}
+
+.doc-status-badge.is-success {
+  background: var(--law-wash);
+  color: var(--law-accent);
+  border-color: color-mix(in srgb, var(--law-accent) 25%, var(--law-line));
+}
+
+.doc-status-badge.is-failed {
+  background: var(--law-risk-high-bg, #fdf2f2);
+  color: var(--law-risk-high, #c9443e);
+  border-color: var(--law-risk-high-border, #f4c6c4);
+}
+
+/* 右侧主工作区 */
+.doc-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px 16px;
+  overflow: hidden;
+  background: var(--law-bg);
+}
+
+/* 上方模板选择区 */
+.doc-template-section {
+  flex: 0 0 auto;
+  border: 1px solid var(--law-line);
+  border-radius: 16px;
+  background: var(--law-card);
+  box-shadow: 0 1px 4px #2027200a;
+  padding: 10px 14px;
+}
+
+.doc-template-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.doc-template-section-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.doc-section-eyebrow {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--law-wash);
+  color: var(--law-accent);
+  font-size: 11.5px;
+  font-weight: 660;
+}
+
+.doc-active-template-name {
+  font-size: 14.5px;
+  font-weight: 680;
+  color: var(--law-ink);
+}
+
+.doc-template-field-count {
+  font-size: 12px;
+  color: var(--law-muted);
+}
+
+.doc-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--law-line);
+  border-radius: 8px;
+  background: var(--law-panel);
+  color: var(--law-muted);
+  font-size: 12px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease;
+}
+
+.doc-collapse-btn:hover {
+  color: var(--law-ink);
+  background: var(--law-hover);
+}
+
+.doc-template-body {
+  margin-top: 10px;
+}
+
+.doc-template-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--law-muted);
+}
+
+.doc-template-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.doc-template-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-panel);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.doc-template-card:hover {
+  border-color: color-mix(in srgb, var(--law-accent) 45%, var(--law-line));
+  background: var(--law-hover);
+}
+
+.doc-template-card.is-selected {
+  border-color: var(--law-accent);
+  background: var(--law-wash);
+  box-shadow: 0 2px 8px #20272012;
+}
+
+.doc-template-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.doc-template-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--law-card);
+  color: var(--law-accent);
+  font-size: 16px;
+  border: 1px solid var(--law-line);
+}
+
+.doc-template-count {
+  font-size: 11.5px;
+  color: var(--law-muted);
+}
+
+.doc-template-card-name {
+  font-size: 14px;
+  font-weight: 670;
+  color: var(--law-ink);
+}
+
+.doc-template-card-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--law-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.doc-template-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--law-accent);
+  color: var(--law-on-accent);
+  font-size: 12px;
+}
+
+/* 下方左右双栏：要素表单 + 文书编辑预览 */
+.doc-split-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(360px, 440px) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.doc-split-left,
+.doc-split-right {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 要素采集表单面板 */
+.doc-form-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid var(--law-line);
+  border-radius: 16px;
+  background: var(--law-card);
+  box-shadow: 0 1px 4px #2027200a;
+  overflow: hidden;
+}
+
+.doc-pane-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--law-line);
+  background: var(--law-panel);
+}
+
+.doc-pane-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.doc-pane-title-group h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 680;
+  color: var(--law-ink);
+  white-space: nowrap;
+}
+
+.doc-pane-subtitle {
+  font-size: 12px;
+  color: var(--law-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-form-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.doc-form-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 36px 20px;
+  color: var(--law-muted);
+  font-size: 13px;
+}
+
+.doc-form-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+.doc-dynamic-form .el-form-item {
+  margin-bottom: 14px;
+}
+
+.doc-dynamic-form .el-form-item__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--law-ink);
+  line-height: 1.4;
+  padding-bottom: 4px;
+}
+
+.doc-form-group {
+  margin-bottom: 16px;
+}
+
+.doc-form-group:last-child {
+  margin-bottom: 4px;
+}
+
+.doc-form-group-title {
+  margin-bottom: 10px;
+  padding-left: 8px;
+  border-left: 3px solid var(--law-accent);
+  font-size: 13px;
+  font-weight: 680;
+  color: var(--law-accent);
+}
+
+.doc-form-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
+
+.doc-form-fields-grid .is-full-span {
+  grid-column: 1 / -1;
+}
+
+.doc-form-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--law-line);
+  background: var(--law-panel);
+}
+
+.doc-form-hint {
+  font-size: 11.5px;
+  color: var(--law-muted);
+}
+
+/* 文书编辑与 A4 预览面板 */
+.doc-editor-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid var(--law-line);
+  border-radius: 16px;
+  background: var(--law-card);
+  box-shadow: 0 1px 4px #2027200a;
+  overflow: hidden;
+}
+
+.doc-editor-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--law-line);
+  background: var(--law-panel);
+}
+
+.doc-editor-title-wrap {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doc-editor-title-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.doc-dirty-badge {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--law-wash);
+  color: var(--law-accent);
+  font-size: 11.5px;
+  font-weight: 640;
+  white-space: nowrap;
+}
+
+.doc-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.doc-view-switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--law-line);
+  border-radius: 9px;
+  background: var(--law-card);
+}
+
+.doc-view-tab {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--law-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.doc-view-tab.is-active {
+  background: var(--law-wash);
+  color: var(--law-accent);
+}
+
+.doc-editor-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--law-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-editor-state {
+  margin: auto;
+  max-width: 460px;
+  padding: 40px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-editor-state h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 680;
+  color: var(--law-ink);
+}
+
+.doc-editor-state p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--law-muted);
+}
+
+.doc-state-orbit {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--law-wash);
+  color: var(--law-accent);
+  font-size: 26px;
+}
+
+.doc-state-orbit.is-failed {
+  background: var(--law-risk-high-bg, #fdf2f2);
+  color: var(--law-risk-high, #c9443e);
+}
+
+.doc-error-detail {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--law-risk-high-bg, #fdf2f2);
+  border: 1px solid var(--law-risk-high-border, #f4c6c4);
+  color: var(--law-risk-high, #c9443e) !important;
+  font-weight: 560;
+}
+
+.doc-edit-canvas,
+.doc-preview-canvas {
+  padding: 14px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.doc-edit-meta-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.doc-word-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--law-muted);
+}
+
+.doc-raw-textarea .el-textarea__inner {
+  padding: 16px 18px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--law-ink);
+  background: var(--law-card);
+  border-color: var(--law-line);
+}
+
+/* A4 仿真公文纸张 */
+.doc-a4-paper {
+  width: min(100%, 794px);
+  min-height: 680px;
+  margin: 0 auto;
+  padding: 52px 60px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1a1d1a;
+  box-shadow: 0 4px 20px #20272014;
+}
+
+html.dark .lawyer-surface .doc-a4-paper {
+  background: #222823;
+  color: #eef4ec;
+  border-color: var(--law-line);
+  box-shadow: 0 8px 28px #0004;
+}
+
+.doc-a4-title {
+  margin: 0 0 28px;
+  text-align: center;
+  font-family: "SimSun", "Songti SC", "STSong", serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 1px;
+}
+
+.doc-a4-content {
+  font-family: "FangSong", "FangSong_GB2312", "STFangsong", "SimSun", serif;
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.doc-a4-line {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc-a4-line.is-indent {
+  text-indent: 2em;
+}
+
+.doc-a4-line.is-no-indent {
+  text-indent: 0;
+}
+
+.doc-a4-line.is-right {
+  text-align: right;
+  text-indent: 0;
+}
+
+.doc-a4-line.is-blank {
+  height: 0.9em;
+  margin: 0;
+}
+
+.doc-editor-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--law-line);
+  background: var(--law-panel);
+  color: var(--law-muted);
+  font-size: 12px;
+}
+
+/* 响应式适配 */
+@media (max-width: 1200px) {
+  .doc-template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .doc-split-grid {
+    grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .doc-page {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .doc-workspace-body,
+  .doc-main {
+    overflow: visible;
+  }
+
+  .doc-main {
+    padding: 12px;
+  }
+
+  .doc-header {
+    padding: 8px 12px;
+  }
+
+  .doc-account-name,
+  .doc-new-btn span {
+    display: none;
+  }
+
+  .doc-template-grid,
+  .doc-form-fields-grid,
+  .doc-split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-mobile-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid var(--law-line);
+    border-radius: 12px;
+    background: var(--law-panel);
+  }
+
+  .doc-mobile-tab {
+    min-height: 36px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--law-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .doc-mobile-tab.is-active {
+    background: var(--law-card);
+    color: var(--law-accent);
+    box-shadow: 0 1px 2px #20272010;
+  }
+
+  .doc-split-left.is-mobile-hidden,
+  .doc-split-right.is-mobile-hidden {
+    display: none;
+  }
+
+  .doc-form-pane,
+  .doc-editor-pane {
+    height: auto;
+  }
+
+  .doc-a4-paper {
+    padding: 28px 20px;
+    min-height: 460px;
+  }
+
+  .doc-a4-title {
+    font-size: 19px;
+  }
+}

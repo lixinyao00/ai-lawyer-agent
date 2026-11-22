@@ -1,0 +1,566 @@
+[
+  {
+    "code": "labor_arbitration",
+    "name": "劳动仲裁申请书",
+    "description": "适用于劳动者向劳动人事争议仲裁委员会申请仲裁，主张工资、经济补偿金、赔偿金等。",
+    "fields": [
+      {
+        "key": "applicantName",
+        "label": "姓名",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：张三",
+        "maxLength": 200,
+        "group": "申请人信息"
+      },
+      {
+        "key": "applicantGender",
+        "label": "性别",
+        "type": "select",
+        "required": true,
+        "placeholder": "请选择性别",
+        "maxLength": 20,
+        "options": ["男", "女"],
+        "group": "申请人信息"
+      },
+      {
+        "key": "applicantBirth",
+        "label": "出生日期",
+        "type": "date",
+        "required": false,
+        "placeholder": "如：1990-01-01",
+        "maxLength": 10,
+        "group": "申请人信息"
+      },
+      {
+        "key": "applicantIdCard",
+        "label": "身份证号",
+        "type": "idcard",
+        "required": true,
+        "placeholder": "18 位身份证号",
+        "maxLength": 18,
+        "group": "申请人信息"
+      },
+      {
+        "key": "applicantPhone",
+        "label": "联系电话",
+        "type": "phone",
+        "required": true,
+        "placeholder": "手机号或固定电话",
+        "maxLength": 20,
+        "group": "申请人信息"
+      },
+      {
+        "key": "applicantAddress",
+        "label": "住址",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：XX省XX市XX区XX路XX号",
+        "maxLength": 200,
+        "group": "申请人信息"
+      },
+      {
+        "key": "employerName",
+        "label": "单位名称",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：XX有限公司",
+        "maxLength": 200,
+        "group": "被申请人信息"
+      },
+      {
+        "key": "employerCreditCode",
+        "label": "统一社会信用代码",
+        "type": "text",
+        "required": false,
+        "placeholder": "18 位统一社会信用代码",
+        "maxLength": 200,
+        "group": "被申请人信息"
+      },
+      {
+        "key": "employerLegalRep",
+        "label": "法定代表人",
+        "type": "text",
+        "required": false,
+        "placeholder": "如：李四",
+        "maxLength": 200,
+        "group": "被申请人信息"
+      },
+      {
+        "key": "employerAddress",
+        "label": "单位地址",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：XX省XX市XX区XX路XX号",
+        "maxLength": 200,
+        "group": "被申请人信息"
+      },
+      {
+        "key": "entryDate",
+        "label": "入职日期",
+        "type": "date",
+        "required": true,
+        "placeholder": "如：2020-03-01",
+        "maxLength": 10,
+        "group": "劳动关系"
+      },
+      {
+        "key": "leaveDate",
+        "label": "离职日期",
+        "type": "date",
+        "required": false,
+        "placeholder": "如：2024-06-30",
+        "maxLength": 10,
+        "group": "劳动关系"
+      },
+      {
+        "key": "position",
+        "label": "岗位",
+        "type": "text",
+        "required": false,
+        "placeholder": "如：销售经理",
+        "maxLength": 200,
+        "group": "劳动关系"
+      },
+      {
+        "key": "monthlySalary",
+        "label": "月工资(元)",
+        "type": "money",
+        "required": true,
+        "placeholder": "如：8000.00",
+        "maxLength": 20,
+        "group": "劳动关系"
+      },
+      {
+        "key": "arbitrationCommission",
+        "label": "仲裁委员会名称",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：XX市劳动人事争议仲裁委员会",
+        "maxLength": 200,
+        "group": "仲裁请求"
+      },
+      {
+        "key": "claims",
+        "label": "仲裁请求",
+        "type": "textarea",
+        "required": true,
+        "placeholder": "逐项列明请求事项及金额",
+        "maxLength": 2000,
+        "group": "仲裁请求"
+      },
+      {
+        "key": "factsAndReasons",
+        "label": "事实与理由",
+        "type": "textarea",
+        "required": true,
+        "placeholder": "陈述劳动关系建立、履行、争议经过及法律依据",
+        "maxLength": 2000,
+        "group": "仲裁请求"
+      },
+      {
+        "key": "evidenceList",
+        "label": "证据清单",
+        "type": "textarea",
+        "required": false,
+        "placeholder": "列明证据名称及证明目的",
+        "maxLength": 2000,
+        "group": "仲裁请求"
+      }
+    ]
+  },
+  {
+    "code": "payment_demand",
+    "name": "律师催款函",
+    "description": "律师接受委托人委托，向债务人发出书面催告，明确还款期限与法律后果。",
+    "fields": [
+      {
+        "key": "lawFirmName",
+        "label": "律师事务所",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：XX律师事务所",
+        "maxLength": 200,
+        "group": "律所与委托人"
+      },
+      {
+        "key": "lawyerName",
+        "label": "承办律师",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：王律师",
+        "maxLength": 200,
+        "group": "律所与委托人"
+      },
+      {
+        "key": "lawyerPhone",
+        "label": "律师电话",
+        "type": "phone",
+        "required": false,
+        "placeholder": "手机号或固定电话",
+        "maxLength": 20,
+        "group": "律所与委托人"
+      },
+      {
+        "key": "clientName",
+        "label": "委托人",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：张三",
+        "maxLength": 200,
+        "group": "律所与委托人"
+      },
+      {
+        "key": "debtorName",
+        "label": "债务人",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：李四",
+        "maxLength": 200,
+        "group": "债务人信息"
+      },
+      {
+        "key": "debtorAddress",
+        "label": "债务人地址",
+        "type": "text",
+        "required": false,
+        "placeholder": "如：XX省XX市XX区XX路XX号",
+        "maxLength": 200,
+        "group": "债务人信息"
+      },
+      {
+        "key": "debtBasis",
+        "label": "债权依据",
+        "type": "textarea",
+        "required": true,
+        "placeholder": "说明借款、货款、服务费等债权形成的事实与凭证",
+        "maxLength": 2000,
+        "group": "债权信息"
+      },
+      {
+        "key": "principalAmount",
+        "label": "欠款本金(元)",
+        "type": "money",
+        "required": true,
+        "placeholder": "如：50000.00",
+        "maxLength": 20,
+        "group": "债权信息"
+      },
+      {
+        "key": "interestOrPenalty",
+        "label": "利息/违约金说明",
+        "type": "textarea",
+        "required": false,
+        "placeholder": "约定利率、违约金计算方式或放弃主张的说明",
+        "maxLength": 2000,
+        "group": "债权信息"
+      },
+      {
+        "key": "deadlineDays",
+        "label": "履行期限(天)",
+        "type": "number",
+        "required": true,
+        "placeholder": "如：7",
+        "maxLength": 20,
+        "defaultValue": 7,
+        "group": "履行要求"
+      },
+      {
+        "key": "paymentAccount",
+        "label": "收款账户",
+        "type": "textarea",
+        "required": false,
+        "placeholder": "户名、开户行、账号",
+        "maxLength": 2000,
+        "group": "履行要求"
+      },
+      {
+        "key": "issueDate",
+        "label": "发函日期",
+        "type": "date",
+        "required": true,
+        "placeholder": "如：2026-11-21",
+        "maxLength": 10,
+        "group": "函件信息"
+      }
+    ]
+  },
+  {
+    "code": "loan_agreement",
+    "name": "规范借条",
+    "description": "自然人之间借款的规范借条，明确本金、利息、期限、交付方式与争议管辖。",
+    "fields": [
+      {
+        "key": "lenderName",
+        "label": "出借人",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：张三",
+        "maxLength": 200,
+        "group": "出借人信息"
+      },
+      {
+        "key": "lenderIdCard",
+        "label": "出借人身份证",
+        "type": "idcard",
+        "required": true,
+        "placeholder": "18 位身份证号",
+        "maxLength": 18,
+        "group": "出借人信息"
+      },
+      {
+        "key": "borrowerName",
+        "label": "借款人",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：李四",
+        "maxLength": 200,
+        "group": "借款人信息"
+      },
+      {
+        "key": "borrowerIdCard",
+        "label": "借款人身份证",
+        "type": "idcard",
+        "required": true,
+        "placeholder": "18 位身份证号",
+        "maxLength": 18,
+        "group": "借款人信息"
+      },
+      {
+        "key": "borrowerPhone",
+        "label": "借款人电话",
+        "type": "phone",
+        "required": false,
+        "placeholder": "手机号或固定电话",
+        "maxLength": 20,
+        "group": "借款人信息"
+      },
+      {
+        "key": "borrowerAddress",
+        "label": "借款人住址",
+        "type": "text",
+        "required": false,
+        "placeholder": "如：XX省XX市XX区XX路XX号",
+        "maxLength": 200,
+        "group": "借款人信息"
+      },
+      {
+        "key": "amount",
+        "label": "借款金额(元)",
+        "type": "money",
+        "required": true,
+        "placeholder": "如：100000.00",
+        "maxLength": 20,
+        "group": "借款要素"
+      },
+      {
+        "key": "loanDate",
+        "label": "出借日期",
+        "type": "date",
+        "required": true,
+        "placeholder": "如：2026-01-01",
+        "maxLength": 10,
+        "group": "借款要素"
+      },
+      {
+        "key": "repaymentDate",
+        "label": "还款日期",
+        "type": "date",
+        "required": true,
+        "placeholder": "如：2026-12-31",
+        "maxLength": 10,
+        "group": "借款要素"
+      },
+      {
+        "key": "annualInterestRate",
+        "label": "年利率(%)",
+        "type": "number",
+        "required": false,
+        "placeholder": "不得超过合同成立时一年期 LPR 四倍",
+        "maxLength": 20,
+        "group": "借款要素"
+      },
+      {
+        "key": "paymentMethod",
+        "label": "交付方式",
+        "type": "select",
+        "required": true,
+        "placeholder": "请选择交付方式",
+        "maxLength": 20,
+        "options": ["银行转账", "现金", "微信", "支付宝"],
+        "group": "借款要素"
+      },
+      {
+        "key": "lenderAccount",
+        "label": "还款收款账户",
+        "type": "textarea",
+        "required": false,
+        "placeholder": "户名、开户行、账号",
+        "maxLength": 2000,
+        "group": "收款与用途"
+      },
+      {
+        "key": "purpose",
+        "label": "借款用途",
+        "type": "text",
+        "required": false,
+        "placeholder": "如：资金周转",
+        "maxLength": 200,
+        "group": "收款与用途"
+      },
+      {
+        "key": "guarantorName",
+        "label": "担保人",
+        "type": "text",
+        "required": false,
+        "placeholder": "如：王五",
+        "maxLength": 200,
+        "group": "担保与管辖"
+      },
+      {
+        "key": "disputeCourt",
+        "label": "管辖约定",
+        "type": "select",
+        "required": false,
+        "placeholder": "请选择管辖法院",
+        "maxLength": 20,
+        "options": ["出借人住所地人民法院", "借款人住所地人民法院"],
+        "group": "担保与管辖"
+      }
+    ]
+  },
+  {
+    "code": "lease_termination",
+    "name": "房屋租赁解约通知书",
+    "description": "房屋租赁合同一方通知对方提前解除租赁关系，明确解约事由、生效日期与结算安排。",
+    "fields": [
+      {
+        "key": "senderRole",
+        "label": "发函方身份",
+        "type": "select",
+        "required": true,
+        "placeholder": "请选择发函方身份",
+        "maxLength": 20,
+        "options": ["出租人", "承租人"],
+        "group": "出租人与承租人"
+      },
+      {
+        "key": "landlordName",
+        "label": "出租人",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：张三",
+        "maxLength": 200,
+        "group": "出租人与承租人"
+      },
+      {
+        "key": "landlordPhone",
+        "label": "出租人电话",
+        "type": "phone",
+        "required": false,
+        "placeholder": "手机号或固定电话",
+        "maxLength": 20,
+        "group": "出租人与承租人"
+      },
+      {
+        "key": "tenantName",
+        "label": "承租人",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：李四",
+        "maxLength": 200,
+        "group": "出租人与承租人"
+      },
+      {
+        "key": "tenantPhone",
+        "label": "承租人电话",
+        "type": "phone",
+        "required": false,
+        "placeholder": "手机号或固定电话",
+        "maxLength": 20,
+        "group": "出租人与承租人"
+      },
+      {
+        "key": "propertyAddress",
+        "label": "房屋地址",
+        "type": "text",
+        "required": true,
+        "placeholder": "如：XX省XX市XX区XX路XX号XX室",
+        "maxLength": 200,
+        "group": "房屋与合同"
+      },
+      {
+        "key": "contractSignDate",
+        "label": "租赁合同签订日期",
+        "type": "date",
+        "required": true,
+        "placeholder": "如：2025-06-01",
+        "maxLength": 10,
+        "group": "房屋与合同"
+      },
+      {
+        "key": "leaseStart",
+        "label": "租期起",
+        "type": "date",
+        "required": false,
+        "placeholder": "如：2025-07-01",
+        "maxLength": 10,
+        "group": "房屋与合同"
+      },
+      {
+        "key": "leaseEnd",
+        "label": "租期止",
+        "type": "date",
+        "required": false,
+        "placeholder": "如：2026-06-30",
+        "maxLength": 10,
+        "group": "房屋与合同"
+      },
+      {
+        "key": "terminationReason",
+        "label": "解约事由",
+        "type": "textarea",
+        "required": true,
+        "placeholder": "说明提前解约的事实与合同/法律依据",
+        "maxLength": 2000,
+        "group": "解约事项"
+      },
+      {
+        "key": "terminationDate",
+        "label": "解约生效日期",
+        "type": "date",
+        "required": true,
+        "placeholder": "如：2026-12-31",
+        "maxLength": 10,
+        "group": "解约事项"
+      },
+      {
+        "key": "depositAmount",
+        "label": "押金(元)",
+        "type": "money",
+        "required": false,
+        "placeholder": "如：5000.00",
+        "maxLength": 20,
+        "group": "解约事项"
+      },
+      {
+        "key": "rentSettlement",
+        "label": "租金/押金结算方式",
+        "type": "textarea",
+        "required": false,
+        "placeholder": "说明租金结清、押金退还或抵扣安排",
+        "maxLength": 2000,
+        "group": "解约事项"
+      },
+      {
+        "key": "noticeDate",
+        "label": "通知日期",
+        "type": "date",
+        "required": true,
+        "placeholder": "如：2026-11-21",
+        "maxLength": 10,
+        "group": "通知信息"
+      }
+    ]
+  }
+]

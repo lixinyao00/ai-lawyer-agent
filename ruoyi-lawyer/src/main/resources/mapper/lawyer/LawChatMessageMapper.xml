@@ -104,6 +104,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           and status = 'pending'
     </update>
 
+    <select id="selectAssistantMessagesForObservability" resultMap="LawChatMessageResult">
+        <include refid="selectMessageVo"/>
+        where role = 'assistant'
+        <if test="beginTime != null and beginTime != ''">
+            and create_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            and create_time &lt; date_add(#{endTime}, interval 1 day)
+        </if>
+        order by id asc
+    </select>
+
     <update id="failStalePending">
         update law_chat_message
         set status = 'failed',

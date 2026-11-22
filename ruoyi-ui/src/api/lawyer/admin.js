@@ -25,3 +25,13 @@ export function delAdminSession(id) {
     method: 'delete'
   })
 }
+
+// 查询后台 Token / TTFT / RAG / Agent 工具调用可观测性聚合统计
+export function getAdminObservability(query) {
+  return request({
+    url: '/lawyer/admin/sessions/observability',
+    method: 'get',
+    params: query
+  })
+}
+

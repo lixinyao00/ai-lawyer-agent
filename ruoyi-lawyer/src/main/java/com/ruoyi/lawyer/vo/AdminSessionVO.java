@@ -30,6 +30,15 @@ public class AdminSessionVO
     /** 失败消息数 */
     private Long failedCount;
 
+    /** 累计 Token 数（assistant 消息 total_tokens 求和） */
+    private Long totalTokens;
+
+    /** 平均首字延迟（毫秒，assistant 消息 ttft_ms 均值取整） */
+    private Long avgTtftMs;
+
+    /** 工具调用次数（assistant 消息 tool_calls_json 数组长度求和） */
+    private Integer toolCallCount;
+
     /** 创建时间 */
     private Date createTime;
 
@@ -104,6 +113,36 @@ public class AdminSessionVO
     public void setFailedCount(Long failedCount)
     {
         this.failedCount = failedCount;
+    }
+
+    public Long getTotalTokens()
+    {
+        return totalTokens;
+    }
+
+    public void setTotalTokens(Long totalTokens)
+    {
+        this.totalTokens = totalTokens;
+    }
+
+    public Long getAvgTtftMs()
+    {
+        return avgTtftMs;
+    }
+
+    public void setAvgTtftMs(Long avgTtftMs)
+    {
+        this.avgTtftMs = avgTtftMs;
+    }
+
+    public Integer getToolCallCount()
+    {
+        return toolCallCount;
+    }
+
+    public void setToolCallCount(Integer toolCallCount)
+    {
+        this.toolCallCount = toolCallCount;
     }
 
     public Date getCreateTime()

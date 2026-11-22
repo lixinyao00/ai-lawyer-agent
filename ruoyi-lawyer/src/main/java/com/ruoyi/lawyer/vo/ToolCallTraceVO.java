@@ -31,6 +31,9 @@ public class ToolCallTraceVO
     /** 结果摘要 */
     private String resultSummary;
 
+    /** 结构化详情（如计算公式、分步过程、法律依据等） */
+    private Map<String, Object> detail;
+
     /** 执行耗时（毫秒） */
     private Long durationMs;
 
@@ -105,6 +108,16 @@ public class ToolCallTraceVO
     public void setResultSummary(String resultSummary)
     {
         this.resultSummary = resultSummary;
+    }
+
+    public Map<String, Object> getDetail()
+    {
+        return detail;
+    }
+
+    public void setDetail(Map<String, Object> detail)
+    {
+        this.detail = detail;
     }
 
     public Long getDurationMs()

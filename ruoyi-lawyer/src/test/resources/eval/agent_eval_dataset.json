@@ -1,0 +1,316 @@
+{
+  "version": "V2.0",
+  "description": "AI 律师助手 Agent 工具调用与确定性计算离线基准评测集：9 道精确数值计算题（12 项断言）+ 3 道多步编排题 + 3 道异常自愈/熔断题",
+  "cases": [
+    {
+      "id": "AGT-01",
+      "type": "calc",
+      "title": "N 整年：工作 3 年、月薪 10000 元的经济补偿",
+      "assertions": [
+        {
+          "calcType": "labor_compensation",
+          "params": {
+            "monthlySalary": 10000,
+            "terminationType": "n",
+            "yearsOfService": 3
+          },
+          "expected": {
+            "amount": "30000.00",
+            "countedMonths": "3",
+            "capped": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "AGT-02",
+      "type": "calc",
+      "title": "N 不满半年按 0.5 折算：工作 3.2 年、月薪 10000 元",
+      "assertions": [
+        {
+          "calcType": "labor_compensation",
+          "params": {
+            "monthlySalary": 10000,
+            "terminationType": "n",
+            "yearsOfService": 3.2
+          },
+          "expected": {
+            "amount": "35000.00",
+            "countedMonths": "3.5",
+            "capped": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "AGT-03",
+      "type": "calc",
+      "title": "N 满半年进 1：工作 2.6 年、月薪 12000 元",
+      "assertions": [
+        {
+          "calcType": "labor_compensation",
+          "params": {
+            "monthlySalary": 12000,
+            "terminationType": "n",
+            "yearsOfService": 2.6
+          },
+          "expected": {
+            "amount": "36000.00",
+            "countedMonths": "3",
+            "capped": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "AGT-04",
+      "type": "calc",
+      "title": "N+1：工作 4 年、月薪 8000 元、上月工资 9000 元",
+      "assertions": [
+        {
+          "calcType": "labor_compensation",
+          "params": {
+            "monthlySalary": 8000,
+            "terminationType": "n_plus_1",
+            "yearsOfService": 4,
+            "lastMonthSalary": 9000
+          },
+          "expected": {
+            "amount": "41000.00",
+            "countedMonths": "4",
+            "noticePay": "9000.00"
+          }
+        }
+      ]
+    },
+    {
+      "id": "AGT-05",
+      "type": "calc",
+      "title": "2N 违法解除：工作 3.5 年（满半年进 1，折算 4 个月）、月薪 10000 元",
+      "assertions": [
+        {
+          "calcType": "labor_compensation",
+          "params": {
+            "monthlySalary": 10000,
+            "terminationType": "2n",
+            "yearsOfService": 3.5
+          },
+          "expected": {
+            "amount": "80000.00",
+            "countedMonths": "4"
+          }
+        }
+      ]
+    },
+    {
+      "id": "AGT-06",
+      "type": "calc",
+      "title": "三倍社平封顶：工作 15 年、月薪 50000 元、社平三倍 30000 元",
+      "assertions": [
+        {
+          "calcType": "labor_compensation",
+          "params": {
+            "monthlySalary": 50000,
+            "terminationType": "n",
+            "yearsOfService": 15,
+            "localAvgSalary3x": 30000
+          },
+          "expected": {
+            "amount": "360000.00",
+            "countedMonths": "12",
+            "capped": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "AGT-07",
+      "type": "calc",
+      "title": "借款利息 LPR 四倍以内：按天数与按起止日期两种口径",
+      "assertions": [
+        {
+          "calcType": "loan_interest",
+          "params": {
+            "principal": 100000,
+            "annualRatePercent": 12,
+            "days": 365,
+            "lprAnnualPercent": 3.1
+          },
+          "expected": {
+            "days": 365,
+            "agreedInterest": "12000.00",
+            "protectedInterest": "12000.00",
+            "excessAmount": "0.00",
+            "totalPayable": "112000.00",
+            "exceedsLpr4x": false
+          }
+        },
+        {
+          "calcType": "loan_interest",
+          "params": {
+            "principal": 50000,
+            "annualRatePercent": 10,
+            "startDate": "2024-01-01",
+            "endDate": "2024-03-01",
+            "lprAnnualPercent": 3.1
+          },
+          "expected": {
+            "days": 60,
+            "agreedInterest": "821.92",
+            "protectedInterest": "821.92",
+            "totalPayable": "50821.92",
+            "exceedsLpr4x": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "AGT-08",
+      "type": "calc",
+      "title": "借款利息超出 LPR 四倍红线：年利率 24%、本金 100000 元",
+      "assertions": [
+        {
+          "calcType": "loan_interest",
+          "params": {
+            "principal": 100000,
+            "annualRatePercent": 24,
+            "days": 365,
+            "lprAnnualPercent": 3.1
+          },
+          "expected": {
+            "agreedInterest": "24000.00",
+            "protectedInterest": "12400.00",
+            "excessAmount": "11600.00",
+            "totalPayable": "112400.00",
+            "exceedsLpr4x": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "AGT-09",
+      "type": "calc",
+      "title": "诉讼时效与劳动仲裁时效：民事 3 年未过期、民事 3 年已过期、劳动仲裁 1 年",
+      "assertions": [
+        {
+          "calcType": "limitation_period",
+          "params": {
+            "caseType": "civil",
+            "knowledgeDate": "2024-01-01",
+            "referenceDate": "2026-01-01"
+          },
+          "expected": {
+            "periodYears": 3,
+            "deadlineDate": "2027-01-01",
+            "remainingDays": 365,
+            "expired": false
+          }
+        },
+        {
+          "calcType": "limitation_period",
+          "params": {
+            "caseType": "civil",
+            "knowledgeDate": "2020-01-01",
+            "referenceDate": "2026-01-01"
+          },
+          "expected": {
+            "periodYears": 3,
+            "deadlineDate": "2023-01-01",
+            "remainingDays": -1096,
+            "expired": true
+          }
+        },
+        {
+          "calcType": "limitation_period",
+          "params": {
+            "caseType": "labor_arbitration",
+            "knowledgeDate": "2025-06-01",
+            "referenceDate": "2026-01-01"
+          },
+          "expected": {
+            "periodYears": 1,
+            "deadlineDate": "2026-06-01",
+            "remainingDays": 151,
+            "expired": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "AGT-10",
+      "type": "orchestration",
+      "scenario": "search_calc",
+      "title": "先检索法条再精确计算违法解除赔偿金",
+      "expected": {
+        "tools": [
+          "search_law_articles",
+          "calc_legal_amount"
+        ],
+        "finalContains": "80,000.00",
+        "minCitations": 2
+      }
+    },
+    {
+      "id": "AGT-11",
+      "type": "orchestration",
+      "scenario": "search_draft",
+      "title": "先检索法条再校验要素并生成劳动仲裁申请书草稿",
+      "expected": {
+        "tools": [
+          "search_law_articles",
+          "create_document_draft"
+        ],
+        "draftId": 9001,
+        "finalContains": "9001"
+      }
+    },
+    {
+      "id": "AGT-12",
+      "type": "orchestration",
+      "scenario": "search_calc_draft",
+      "title": "三步链路：检索法条 → 精确计算 → 生成文书草稿",
+      "expected": {
+        "tools": [
+          "search_law_articles",
+          "calc_legal_amount",
+          "create_document_draft"
+        ],
+        "draftId": 9002,
+        "finalContains": "72,000.00"
+      }
+    },
+    {
+      "id": "AGT-13",
+      "type": "self_healing",
+      "scenario": "malformed_json",
+      "title": "首轮工具 arguments 为非法 JSON，错误回传后第二轮自愈成功",
+      "expected": {
+        "firstStatus": "error",
+        "secondStatus": "success",
+        "errorContains": "JSON"
+      }
+    },
+    {
+      "id": "AGT-14",
+      "type": "self_healing",
+      "scenario": "invalid_params",
+      "title": "首轮 calc_legal_amount 缺必填字段，字段级提示后第二轮修正成功",
+      "expected": {
+        "firstStatus": "error",
+        "secondStatus": "success",
+        "errorContains": "monthlySalary"
+      }
+    },
+    {
+      "id": "AGT-15",
+      "type": "self_healing",
+      "scenario": "circuit_breaker",
+      "title": "连续 4 轮无效工具调用触发 max-iterations=4 熔断并完成兜底回答",
+      "expected": {
+        "maxIterations": 4,
+        "errorCount": 4,
+        "finalContains": "兜底回答"
+      }
+    }
+  ]
+}

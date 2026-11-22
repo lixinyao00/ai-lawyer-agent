@@ -54,6 +54,19 @@ public class LawAdminSessionController extends BaseController
     }
 
     /**
+     * 后台 Token / TTFT / RAG / Tool 可观测性聚合统计
+     *
+     * <p>路由必须声明在 {@code /{id}/messages} 与 {@code /{id}} 之前，避免 observability 被当作 id。</p>
+     */
+    @PreAuthorize("@ss.hasPermi('lawyer:manage:list')")
+    @GetMapping("/observability")
+    public AjaxResult observability(@RequestParam(required = false) String beginTime,
+            @RequestParam(required = false) String endTime)
+    {
+        return success(adminSessionService.getObservability(beginTime, endTime));
+    }
+
+    /**
      * 会话消息审计，按消息 id 正序返回
      */
     @PreAuthorize("@ss.hasPermi('lawyer:manage:query')")

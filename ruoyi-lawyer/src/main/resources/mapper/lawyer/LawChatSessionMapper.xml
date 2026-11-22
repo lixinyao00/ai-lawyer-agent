@@ -20,6 +20,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="title"        column="title"         />
         <result property="messageCount" column="message_count" />
         <result property="failedCount"  column="failed_count"  />
+        <result property="totalTokens"  column="total_tokens"  />
+        <result property="avgTtftMs"    column="avg_ttft_ms"   />
+        <result property="toolCallCount" column="tool_call_count" />
         <result property="createTime"   column="create_time"   />
         <result property="updateTime"   column="update_time"   />
     </resultMap>
@@ -67,6 +70,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                s.title,
                (select count(*) from law_chat_message m where m.session_id = s.id) as message_count,
                (select count(*) from law_chat_message m where m.session_id = s.id and m.status = 'failed') as failed_count,
+               coalesce((select sum(m.total_tokens) from law_chat_message m
+                         where m.session_id = s.id and m.role = 'assistant'), 0) as total_tokens,
+               coalesce(round((select avg(m.ttft_ms) from law_chat_message m
+                         where m.session_id = s.id and m.role = 'assistant' and m.ttft_ms is not null)), 0) as avg_ttft_ms,
+               coalesce((select sum(json_length(m.tool_calls_json)) from law_chat_message m
+                         where m.session_id = s.id and m.role = 'assistant' and m.tool_calls_json is not null), 0)
+                         as tool_call_count,
                s.create_time,
                s.update_time
         from law_chat_session s

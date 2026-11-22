@@ -398,6 +398,7 @@
       v-model="chunkDrawerVisible"
       :title="chunkDrawerTitle"
       size="min(960px, 95vw)"
+      class="lawyer-surface"
       destroy-on-close
     >
       <div class="knowledge-drawer-body">
@@ -517,7 +518,7 @@
       v-model="debugDrawerVisible"
       title="RAG 混合检索与多轮改写对比实验室"
       size="min(1160px, 95vw)"
-      class="knowledge-debug-drawer"
+      class="knowledge-debug-drawer lawyer-surface"
       destroy-on-close
     >
       <div class="knowledge-drawer-body">

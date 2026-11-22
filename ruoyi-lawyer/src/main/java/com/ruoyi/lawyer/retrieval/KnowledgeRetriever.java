@@ -412,6 +412,7 @@ public class KnowledgeRetriever
     private List<CitationVO> vectorCitations(Snapshot current, String query, int limit, String category,
             int snippetMaxChars)
     {
+        QueryContext context = analyzeQuery(current, query);
         float[] queryVector = embedQuery(query);
         if (queryVector == null || !vectorSearchEngine.isReady()
                 || queryVector.length != vectorSearchEngine.dimensions())
@@ -420,33 +421,51 @@ public class KnowledgeRetriever
         }
         int candidateDepth = Math.max(limit * 4, 20);
         List<VectorHit> hits = safeVectorSearch(queryVector, candidateDepth, category);
-        List<VectorHit> filtered = new ArrayList<>();
-        for (VectorHit hit : hits)
+        Map<Long, Double> vectorScores = new HashMap<>();
+        List<IndexedChunk> ordered = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        // 条号精确直通：查询显式包含“第X条”时，优先返回对应条文（与 BM25 / RRF 口径一致），
+        // 避免纯语义向量在长条文与法规同名场景下丢失精确条号命中。
+        for (IndexedChunk chunk : current.chunks)
         {
-            if (hit != null && hit.score() >= VECTOR_MIN_SCORE && current.byChunkId.containsKey(hit.chunkId()))
+            if (matchesCategory(chunk, category) && context.matchesExactArticle(chunk)
+                    && seen.add(chunk.id))
             {
-                filtered.add(hit);
+                ordered.add(chunk);
             }
         }
-        if (filtered.isEmpty())
+        for (VectorHit hit : hits)
+        {
+            if (hit == null || hit.score() < VECTOR_MIN_SCORE || !current.byChunkId.containsKey(hit.chunkId()))
+            {
+                continue;
+            }
+            IndexedChunk chunk = current.byChunkId.get(hit.chunkId());
+            vectorScores.put(chunk.id, hit.score());
+            if (seen.add(chunk.id))
+            {
+                ordered.add(chunk);
+            }
+        }
+        if (ordered.isEmpty())
         {
             return null;
         }
         List<CitationVO> citations = new ArrayList<>();
         int rank = 0;
-        for (VectorHit hit : filtered)
+        for (IndexedChunk chunk : ordered)
         {
             if (citations.size() >= limit)
             {
                 break;
             }
-            IndexedChunk chunk = current.byChunkId.get(hit.chunkId());
             rank++;
             CitationVO citation = toCitation(chunk, snippetMaxChars);
+            Double vectorScore = vectorScores.get(chunk.id);
             citation.setVectorRank(rank);
-            citation.setVectorScore(round(hit.score(), 4));
+            citation.setVectorScore(round(vectorScore == null ? 1.0D : vectorScore, 4));
             citation.setRetrievalMode(MODE_VECTOR);
-            citation.setScore(round(hit.score(), 4));
+            citation.setScore(round(vectorScore == null ? 1.0D : vectorScore, 4));
             citations.add(citation);
         }
         return citations;

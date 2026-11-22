@@ -3777,3 +3777,356 @@ html.dark .lawyer-surface .agent-step-status-pill.is-running {
   }
 }
 
+/* ==========================================================================
+   V2.0 M7 后台 Token / TTFT / Agent 可观测性看板与消息审计回放
+   ========================================================================== */
+.obs-dashboard {
+  margin: 4px 0 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--law-line);
+  border-radius: 14px;
+  background: var(--law-panel);
+}
+
+.obs-dashboard-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 14px;
+}
+
+.obs-dashboard-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obs-dashboard-icon {
+  color: var(--law-accent);
+  font-size: 18px;
+}
+
+.obs-dashboard-title {
+  margin: 0;
+  color: var(--law-ink);
+  font-size: 15px;
+  font-weight: 680;
+}
+
+.obs-range-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1px solid var(--law-line);
+  border-radius: 999px;
+  background: var(--law-card);
+  color: var(--law-muted);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.obs-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.obs-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 13px 15px;
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-card);
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.obs-kpi-card:hover {
+  border-color: color-mix(in srgb, var(--law-accent) 32%, var(--law-line));
+  box-shadow: var(--law-shadow);
+}
+
+.obs-kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.obs-kpi-label {
+  color: var(--law-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.obs-kpi-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 15px;
+  background: var(--law-wash);
+  color: var(--law-accent);
+}
+
+.obs-kpi-icon.is-token {
+  background: #fef4e6;
+  color: #c96a16;
+}
+
+.obs-kpi-icon.is-latency {
+  background: #edf4ff;
+  color: #29599c;
+}
+
+.obs-kpi-icon.is-rag {
+  background: #f5effe;
+  color: #6538a6;
+}
+
+.obs-kpi-icon.is-agent {
+  background: var(--law-risk-low-bg);
+  color: var(--law-risk-low);
+}
+
+html.dark .lawyer-surface .obs-kpi-icon.is-token {
+  background: #3a2d1d;
+  color: #f6ad55;
+}
+
+html.dark .lawyer-surface .obs-kpi-icon.is-latency {
+  background: #1f2c3f;
+  color: #9dc2f5;
+}
+
+html.dark .lawyer-surface .obs-kpi-icon.is-rag {
+  background: #2b213c;
+  color: #ceb0fa;
+}
+
+.obs-kpi-value {
+  color: var(--law-ink);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.obs-kpi-unit {
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--law-muted);
+}
+
+.obs-kpi-sub {
+  color: var(--law-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.obs-kpi-highlight {
+  color: var(--law-accent);
+  font-weight: 680;
+}
+
+.obs-tool-breakdown {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-card);
+}
+
+.obs-tool-breakdown-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-bottom: 10px;
+}
+
+.obs-tool-breakdown-title {
+  color: var(--law-ink);
+  font-size: 13px;
+  font-weight: 660;
+}
+
+.obs-tool-breakdown-caption {
+  color: var(--law-muted);
+  font-size: 11.5px;
+}
+
+.obs-tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.obs-tool-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.2fr) auto minmax(150px, 1fr);
+  align-items: center;
+  gap: 10px 14px;
+  padding: 8px 11px;
+  border: 1px solid var(--law-line);
+  border-radius: 9px;
+  background: var(--law-panel);
+}
+
+.obs-tool-name-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.obs-tool-label {
+  color: var(--law-ink);
+  font-size: 13px;
+  font-weight: 640;
+}
+
+.obs-tool-code {
+  padding: 1px 6px;
+  border: 1px solid var(--law-line);
+  border-radius: 5px;
+  background: var(--law-code-bg);
+  color: var(--law-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.obs-tool-stats {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.obs-tool-stat-pill {
+  padding: 1px 7px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  background: var(--law-card);
+  color: var(--law-ink);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.obs-tool-stat-pill.is-success {
+  border-color: var(--law-risk-low-border);
+  background: var(--law-risk-low-bg);
+  color: var(--law-risk-low);
+}
+
+.obs-tool-stat-pill.is-duration {
+  color: var(--law-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.obs-tool-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obs-tool-progress-track {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--law-line);
+  overflow: hidden;
+}
+
+.obs-tool-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--law-accent);
+  transition: width .25s ease;
+}
+
+.obs-tool-progress-text {
+  min-width: 48px;
+  text-align: right;
+  color: var(--law-accent);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-metric-num {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+.audit-item-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.audit-metric-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  background: var(--law-panel);
+  color: var(--law-muted);
+  font-size: 11.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.audit-metric-badge.is-token {
+  border-color: color-mix(in srgb, var(--law-accent) 28%, var(--law-line));
+  background: var(--law-wash);
+  color: var(--law-accent);
+}
+
+.audit-metric-badge.is-mode {
+  border-color: #c8daf5;
+  background: #edf4ff;
+  color: #29599c;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+html.dark .lawyer-surface .audit-metric-badge.is-mode {
+  border-color: #364e70;
+  background: #1f2c3f;
+  color: #9dc2f5;
+}
+
+@media (max-width: 1120px) {
+  .obs-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .obs-tool-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .obs-dashboard {
+    padding: 12px;
+  }
+
+  .obs-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -4,7 +4,7 @@ import errorCode from '@/utils/errorCode'
 import { isRelogin } from '@/utils/request'
 import useUserStore from '@/store/modules/user'
 
-const IDLE_TIMEOUT_MS = 45000
+const IDLE_TIMEOUT_MS = 60000
 
 function buildFullUrl(url) {
   if (/^https?:\/\//i.test(url)) {

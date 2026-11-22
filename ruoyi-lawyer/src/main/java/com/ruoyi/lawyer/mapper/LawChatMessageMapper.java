@@ -64,6 +64,16 @@ public interface LawChatMessageMapper
     List<LawChatMessage> selectRecentSuccessMessages(@Param("sessionId") Long sessionId, @Param("limit") int limit);
 
     /**
+     * 查询时间范围内全部 assistant 消息，供后台可观测性聚合统计
+     *
+     * @param beginTime 起始日期 yyyy-MM-dd（含），可为空
+     * @param endTime 结束日期 yyyy-MM-dd（含当天 23:59:59），可为空
+     * @return 助手消息集合
+     */
+    List<LawChatMessage> selectAssistantMessagesForObservability(@Param("beginTime") String beginTime,
+            @Param("endTime") String endTime);
+
+    /**
      * 收敛遗留 pending 的助手消息为 failed/timeout_recovered
      *
      * @param sessionId 会话ID

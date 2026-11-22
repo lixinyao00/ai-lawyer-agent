@@ -337,6 +337,7 @@ public class LawAgentOrchestrator
         trace.setArguments(arguments);
         trace.setStatus(result.getStatus());
         trace.setResultSummary(result.getSummary());
+        trace.setDetail(result.getDetail());
         trace.setDurationMs(durationMs);
         trace.setDraftId(result.getDraftId());
         traces.add(trace);

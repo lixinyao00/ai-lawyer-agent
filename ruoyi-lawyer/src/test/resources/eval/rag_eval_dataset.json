@@ -1,0 +1,302 @@
+[
+  {
+    "id": "RAG-01",
+    "category": "exact_article",
+    "query": "劳动合同法第四十七条经济补偿标准",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第四十七条" }
+    ]
+  },
+  {
+    "id": "RAG-02",
+    "category": "exact_article",
+    "query": "劳动合同法第八十七条违法解除劳动合同赔偿金二倍标准",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第八十七条" }
+    ]
+  },
+  {
+    "id": "RAG-03",
+    "category": "exact_article",
+    "query": "劳动合同法第十九条试用期期限规定",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第十九条" }
+    ]
+  },
+  {
+    "id": "RAG-04",
+    "category": "exact_article",
+    "query": "劳动合同法第八十二条未签书面劳动合同二倍工资",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第八十二条" }
+    ]
+  },
+  {
+    "id": "RAG-05",
+    "category": "exact_article",
+    "query": "民法典第五百八十五条违约金过高调整",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第五百八十五条" }
+    ]
+  },
+  {
+    "id": "RAG-06",
+    "category": "exact_article",
+    "query": "民法典第七百零三条租赁合同定义",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第七百零三条" }
+    ]
+  },
+  {
+    "id": "RAG-07",
+    "category": "exact_article",
+    "query": "民法典第七百二十六条承租人优先购买权",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第七百二十六条" }
+    ]
+  },
+  {
+    "id": "RAG-08",
+    "category": "exact_article",
+    "query": "民法典第六百八十条借款利息约定不明确",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第六百八十条" }
+    ]
+  },
+  {
+    "id": "RAG-09",
+    "category": "exact_article",
+    "query": "民法典第一千一百六十五条过错侵权责任",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第一千一百六十五条" }
+    ]
+  },
+  {
+    "id": "RAG-10",
+    "category": "exact_article",
+    "query": "民法典第一千一百八十三条精神损害赔偿",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第一千一百八十三条" }
+    ]
+  },
+  {
+    "id": "RAG-11",
+    "category": "colloquial_synonym",
+    "query": "被老板炒鱿鱼了，遣散费怎么算？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第四十七条" }
+    ]
+  },
+  {
+    "id": "RAG-12",
+    "category": "colloquial_synonym",
+    "query": "租房还没到期，房主转手把房子卖给别人，我能优先买下来吗？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第七百二十六条" }
+    ]
+  },
+  {
+    "id": "RAG-13",
+    "category": "colloquial_synonym",
+    "query": "借给朋友十万块没打借条，他现在不认账怎么办？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第六百七十九条" }
+    ]
+  },
+  {
+    "id": "RAG-14",
+    "category": "colloquial_synonym",
+    "query": "租房押金房东赖着不退，能怎么要回来？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第七百三十三条" }
+    ]
+  },
+  {
+    "id": "RAG-15",
+    "category": "colloquial_synonym",
+    "query": "试用期最长能定几个月？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第十九条" }
+    ]
+  },
+  {
+    "id": "RAG-16",
+    "category": "colloquial_synonym",
+    "query": "公司不签劳动合同，干满一年能多拿一倍工资吗？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第八十二条" }
+    ]
+  },
+  {
+    "id": "RAG-17",
+    "category": "colloquial_synonym",
+    "query": "违约金定得太高，能要求法院往下降吗？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第五百八十五条" }
+    ]
+  },
+  {
+    "id": "RAG-18",
+    "category": "colloquial_synonym",
+    "query": "合同里写一切后果概不负责，这种霸王条款算数吗？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第四百九十七条" }
+    ]
+  },
+  {
+    "id": "RAG-19",
+    "category": "colloquial_synonym",
+    "query": "被人撞伤住院，医疗费和误工费能找对方赔吗？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第一千一百七十九条" }
+    ]
+  },
+  {
+    "id": "RAG-20",
+    "category": "colloquial_synonym",
+    "query": "被人打伤后天天失眠，能要精神损害赔偿吗？",
+    "history": [],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第一千一百八十三条" }
+    ]
+  },
+  {
+    "id": "RAG-21",
+    "category": "multi_turn_anaphora",
+    "query": "那到底按几个月工资赔？",
+    "history": [
+      { "role": "user", "content": "公司违法把我辞退了，我工作3年7个月" },
+      { "role": "assistant", "content": "用人单位违法解除劳动合同，应当按经济补偿标准的二倍支付赔偿金。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第八十七条" }
+    ]
+  },
+  {
+    "id": "RAG-22",
+    "category": "multi_turn_anaphora",
+    "query": "那我能怎么要回来？",
+    "history": [
+      { "role": "user", "content": "我租的房子到期搬走了，房东一直拖着押金不退" },
+      { "role": "assistant", "content": "租赁期限届满承租人应当返还租赁物，出租人无正当理由不得扣留押金。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第七百三十三条" }
+    ]
+  },
+  {
+    "id": "RAG-23",
+    "category": "multi_turn_anaphora",
+    "query": "那要是他到期不还，利息怎么算？",
+    "history": [
+      { "role": "user", "content": "朋友借我十万块，写了借条，说好年底还" },
+      { "role": "assistant", "content": "借款合同应当按约定期限返还借款，逾期还款还需承担相应利息。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第六百七十六条" }
+    ]
+  },
+  {
+    "id": "RAG-24",
+    "category": "multi_turn_anaphora",
+    "query": "那法律上最多能定多久？",
+    "history": [
+      { "role": "user", "content": "我在试用期干了两个月，公司说我能力不行要辞退" },
+      { "role": "assistant", "content": "试用期解除劳动合同需要符合法定条件并向劳动者说明理由。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第十九条" }
+    ]
+  },
+  {
+    "id": "RAG-25",
+    "category": "multi_turn_anaphora",
+    "query": "那我能要多少？",
+    "history": [
+      { "role": "user", "content": "公司一直没签书面劳动合同，干了一年多，听说可以要二倍工资" },
+      { "role": "assistant", "content": "用人单位超过一个月未订立书面劳动合同的，应当支付二倍工资。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国劳动合同法", "articleNo": "第八十二条" }
+    ]
+  },
+  {
+    "id": "RAG-26",
+    "category": "multi_turn_anaphora",
+    "query": "那这种条款法院会管吗？",
+    "history": [
+      { "role": "user", "content": "我签的合同里违约金写得很高，感觉不合理" },
+      { "role": "assistant", "content": "约定的违约金过分高于实际损失的，可以请求适当减少。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第五百八十五条" }
+    ]
+  },
+  {
+    "id": "RAG-27",
+    "category": "multi_turn_anaphora",
+    "query": "那我能不认吗？",
+    "history": [
+      { "role": "user", "content": "合同里有一条说公司不承担任何责任，我觉得是霸王条款" },
+      { "role": "assistant", "content": "提供格式条款一方不合理免除自身责任的，该条款可能无效。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第四百九十七条" }
+    ]
+  },
+  {
+    "id": "RAG-28",
+    "category": "multi_turn_anaphora",
+    "query": "那他都该赔我什么？",
+    "history": [
+      { "role": "user", "content": "我被车撞了，对方全责，我住院花了不少钱" },
+      { "role": "assistant", "content": "交通事故造成人身损害的，侵权人应当赔偿相关合理费用。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第一千一百七十九条" }
+    ]
+  },
+  {
+    "id": "RAG-29",
+    "category": "multi_turn_anaphora",
+    "query": "那我这样做合法吗？",
+    "history": [
+      { "role": "user", "content": "我把租的房子转租给朋友了，房东知道后很生气" },
+      { "role": "assistant", "content": "承租人转租应当经出租人同意，未经同意出租人可以解除合同。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第七百一十六条" }
+    ]
+  },
+  {
+    "id": "RAG-30",
+    "category": "multi_turn_anaphora",
+    "query": "那我有资格先买吗？",
+    "history": [
+      { "role": "user", "content": "房东要把房子卖给别人，我还在租期内" },
+      { "role": "assistant", "content": "出租人出卖租赁房屋的，应当在合理期限内通知承租人。" }
+    ],
+    "expected": [
+      { "docTitle": "中华人民共和国民法典", "articleNo": "第七百二十六条" }
+    ]
+  }
+]

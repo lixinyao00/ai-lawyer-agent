@@ -181,9 +181,24 @@ const DEFAULT_TITLE = '新咨询'
 const MESSAGE_PAGE_SIZE = 50
 
 const suggestions = [
-  { icon: House, title: '房屋租赁', caption: '押金、退租与维修', prompt: '我在租房时遇到了纠纷，想了解需要先整理哪些信息。' },
-  { icon: Suitcase, title: '劳动权益', caption: '用工、工资与离职', prompt: '我遇到了劳动争议，应该先整理哪些事实和材料？' },
-  { icon: Document, title: '合同条款', caption: '义务、风险与违约', prompt: '我想了解签订合同前应该重点核对哪些条款。' },
+  {
+    icon: Suitcase,
+    title: '劳动赔偿计算',
+    caption: '2N 赔偿金精确核算与法条检索',
+    prompt: '我在公司工作3年7个月，月薪12000元，今天被公司无故辞退，请帮我精确计算2N违法解除赔偿金并检索法条依据'
+  },
+  {
+    icon: Document,
+    title: '借贷利息核算',
+    caption: 'LPR 四倍司法保护红线测算',
+    prompt: '借款10万元约定年利率24%，逾期180天，请帮我按LPR四倍红线核算司法保护利息'
+  },
+  {
+    icon: House,
+    title: '房屋租赁维权',
+    caption: '语义检索承租人优先购买权',
+    prompt: '房东在租期未满时卖房，租客有优先购买权吗？赔偿怎么算？'
+  },
 ]
 
 const router = useRouter()
@@ -265,6 +280,14 @@ function normalizeMessage(row) {
     aborted: row.errorCode === 'aborted',
     replayPending: false,
     citations: Array.isArray(row.citations) ? row.citations : [],
+    toolCalls: Array.isArray(row.toolCalls) ? row.toolCalls : [],
+    rewrittenQuery: row.rewrittenQuery || '',
+    retrievalMode: row.retrievalMode || '',
+    promptTokens: row.promptTokens ?? null,
+    completionTokens: row.completionTokens ?? null,
+    totalTokens: row.totalTokens ?? null,
+    ttftMs: row.ttftMs ?? null,
+    totalLatencyMs: row.totalLatencyMs ?? null,
     error: row.status === 'failed' ? (row.errorMessage || '回答生成失败') : ''
   }
 }
@@ -444,6 +467,104 @@ function isBusyError(error) {
   return Number(code) === 409 || msg.includes('409') || msg.includes('正在生成')
 }
 
+function applyToolCallEvent(targetReply, toolCallEvent) {
+  if (Array.isArray(toolCallEvent)) {
+    targetReply.toolCalls = [...toolCallEvent]
+    return
+  }
+  if (!toolCallEvent || typeof toolCallEvent !== 'object') {
+    return
+  }
+  const list = Array.isArray(targetReply.toolCalls) ? [...targetReply.toolCalls] : []
+  const idx = toolCallEvent.callId
+    ? list.findIndex((item) => item.callId === toolCallEvent.callId)
+    : -1
+  const normalized = {
+    ...toolCallEvent,
+    status: toolCallEvent.status || 'running',
+    resultSummary: toolCallEvent.resultSummary || '',
+    detail: toolCallEvent.detail || null,
+    durationMs: toolCallEvent.durationMs ?? null,
+    draftId: toolCallEvent.draftId ?? null
+  }
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...normalized }
+  } else {
+    list.push(normalized)
+  }
+  targetReply.toolCalls = list
+}
+
+function applyToolResultEvent(targetReply, toolResultEvent) {
+  if (Array.isArray(toolResultEvent)) {
+    targetReply.toolCalls = [...toolResultEvent]
+    return
+  }
+  if (!toolResultEvent || typeof toolResultEvent !== 'object') {
+    return
+  }
+  const list = Array.isArray(targetReply.toolCalls) ? [...targetReply.toolCalls] : []
+  let idx = toolResultEvent.callId
+    ? list.findIndex((item) => item.callId === toolResultEvent.callId)
+    : -1
+  if (idx < 0 && toolResultEvent.step != null) {
+    idx = list.findIndex(
+      (item) => item.step === toolResultEvent.step && item.toolName === toolResultEvent.toolName
+    )
+  }
+  const summaryText = toolResultEvent.summary ?? toolResultEvent.resultSummary ?? ''
+  if (idx >= 0) {
+    const prev = list[idx]
+    list[idx] = {
+      ...prev,
+      ...toolResultEvent,
+      status: toolResultEvent.status || 'success',
+      resultSummary: summaryText || prev.resultSummary || '',
+      detail: toolResultEvent.detail ?? prev.detail ?? null,
+      durationMs: toolResultEvent.durationMs ?? prev.durationMs ?? null,
+      draftId: toolResultEvent.draftId ?? prev.draftId ?? null
+    }
+  } else {
+    list.push({
+      ...toolResultEvent,
+      status: toolResultEvent.status || 'success',
+      resultSummary: summaryText,
+      detail: toolResultEvent.detail ?? null,
+      durationMs: toolResultEvent.durationMs ?? null,
+      draftId: toolResultEvent.draftId ?? null
+    })
+  }
+  targetReply.toolCalls = list
+}
+
+function syncReplyMetadata(targetReply, payload) {
+  if (!payload || typeof payload !== 'object') return
+  if (payload.rewrittenQuery !== undefined) {
+    targetReply.rewrittenQuery = payload.rewrittenQuery || ''
+  }
+  if (payload.retrievalMode !== undefined) {
+    targetReply.retrievalMode = payload.retrievalMode || ''
+  }
+  if (Array.isArray(payload.toolCalls)) {
+    targetReply.toolCalls = payload.toolCalls
+  }
+  if (payload.promptTokens !== undefined && payload.promptTokens !== null) {
+    targetReply.promptTokens = payload.promptTokens
+  }
+  if (payload.completionTokens !== undefined && payload.completionTokens !== null) {
+    targetReply.completionTokens = payload.completionTokens
+  }
+  if (payload.totalTokens !== undefined && payload.totalTokens !== null) {
+    targetReply.totalTokens = payload.totalTokens
+  }
+  if (payload.ttftMs !== undefined && payload.ttftMs !== null) {
+    targetReply.ttftMs = payload.ttftMs
+  }
+  if (payload.totalLatencyMs !== undefined && payload.totalLatencyMs !== null) {
+    targetReply.totalLatencyMs = payload.totalLatencyMs
+  }
+}
+
 async function executeStream(session, content, targetReply, targetUserMessage = null) {
   const requestId = buildRequestId()
   targetReply.status = 'pending'
@@ -453,6 +574,15 @@ async function executeStream(session, content, targetReply, targetUserMessage = 
   targetReply.replayPending = false
   targetReply.streaming = true
   targetReply.promptText = content
+  targetReply.citations = []
+  targetReply.toolCalls = []
+  targetReply.rewrittenQuery = ''
+  targetReply.retrievalMode = ''
+  targetReply.promptTokens = null
+  targetReply.completionTokens = null
+  targetReply.totalTokens = null
+  targetReply.ttftMs = null
+  targetReply.totalLatencyMs = null
 
   try {
     const result = await send({
@@ -469,9 +599,23 @@ async function executeStream(session, content, targetReply, targetUserMessage = 
         if (meta?.sessionTitle && session.title === DEFAULT_TITLE) {
           session.title = meta.sessionTitle
         }
+        if (meta?.rewrittenQuery !== undefined) {
+          targetReply.rewrittenQuery = meta.rewrittenQuery || ''
+        }
+        if (meta?.retrievalMode !== undefined) {
+          targetReply.retrievalMode = meta.retrievalMode || ''
+        }
       },
       onCitation(citations) {
         targetReply.citations = Array.isArray(citations) ? citations : []
+      },
+      onToolCall(toolCallEvent) {
+        applyToolCallEvent(targetReply, toolCallEvent)
+        scrollToBottom()
+      },
+      onToolResult(toolResultEvent) {
+        applyToolResultEvent(targetReply, toolResultEvent)
+        scrollToBottom()
       },
       onDelta(_chunk, fullText) {
         if (fullText !== undefined && fullText !== null) {
@@ -493,6 +637,7 @@ async function executeStream(session, content, targetReply, targetUserMessage = 
         if (Array.isArray(done?.citations)) {
           targetReply.citations = done.citations
         }
+        syncReplyMetadata(targetReply, done)
       },
       onError(err) {
         targetReply.status = 'failed'
@@ -527,6 +672,7 @@ async function executeStream(session, content, targetReply, targetUserMessage = 
       if (Array.isArray(result.citations)) {
         targetReply.citations = result.citations
       }
+      syncReplyMetadata(targetReply, result)
     }
 
     if (targetReply.status === 'success' && session.title === DEFAULT_TITLE) {
@@ -582,6 +728,14 @@ async function handleSend() {
     aborted: false,
     replayPending: false,
     citations: [],
+    toolCalls: [],
+    rewrittenQuery: '',
+    retrievalMode: '',
+    promptTokens: null,
+    completionTokens: null,
+    totalTokens: null,
+    ttftMs: null,
+    totalLatencyMs: null,
     promptText: content,
     error: ''
   }

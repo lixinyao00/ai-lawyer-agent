@@ -84,6 +84,18 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
+          v-hasPermi="['lawyer:knowledge:edit']"
+          type="warning"
+          plain
+          icon="Refresh"
+          :loading="rebuildingAll"
+          @click="handleRebuildEmbeddings()"
+        >
+          重建向量索引
+        </el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button
           v-hasPermi="['lawyer:knowledge:remove']"
           type="danger"
           plain
@@ -402,6 +414,16 @@
           <el-form-item>
             <el-button type="primary" icon="Search" @click="handleChunkQuery">搜索</el-button>
             <el-button icon="Refresh" @click="resetChunkQuery">重置</el-button>
+            <el-button
+              v-hasPermi="['lawyer:knowledge:edit']"
+              type="warning"
+              plain
+              icon="Refresh"
+              :loading="rebuildingDoc"
+              @click="handleRebuildEmbeddings(currentDoc?.id)"
+            >
+              重建本法规向量
+            </el-button>
           </el-form-item>
         </el-form>
 
@@ -490,69 +512,214 @@
       </template>
     </el-dialog>
 
-    <!-- 检索调试抽屉 -->
+    <!-- RAG 混合检索与多轮改写对比实验室抽屉 -->
     <el-drawer
       v-model="debugDrawerVisible"
-      title="知识库 RAG 检索调试"
-      size="min(680px, 92vw)"
+      title="RAG 混合检索与多轮改写对比实验室"
+      size="min(1160px, 95vw)"
+      class="knowledge-debug-drawer"
       destroy-on-close
     >
       <div class="knowledge-drawer-body">
-        <el-form :model="debugForm" label-width="76px" @submit.prevent>
-          <el-form-item label="测试问题">
+        <el-form :model="debugForm" label-width="96px" class="knowledge-debug-form" @submit.prevent>
+          <el-form-item label="快捷示例">
+            <div class="knowledge-debug-presets">
+              <el-button
+                v-for="preset in DEBUG_PRESETS"
+                :key="preset.label"
+                size="small"
+                plain
+                @click="applyDebugPreset(preset)"
+              >
+                {{ preset.label }}
+              </el-button>
+              <el-button size="small" text type="info" @click="clearDebugForm">清空输入</el-button>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="前序上下文">
             <el-input
-              v-model="debugForm.q"
+              v-model="debugForm.historyContext"
               type="textarea"
-              :rows="3"
-              maxlength="500"
+              :rows="2"
+              maxlength="1000"
               show-word-limit
-              placeholder="输入咨询问题或条文关键词，例如：劳动合同法第四十七条、房东不退押金怎么办"
+              placeholder="可选：填入上一轮咨询背景或追问上下文，用于测试多轮指代消解与 Query 改写"
             />
           </el-form-item>
+
+          <el-form-item label="当前测试问题">
+            <el-input
+              v-model="debugForm.query"
+              type="textarea"
+              :rows="2"
+              maxlength="500"
+              show-word-limit
+              placeholder="输入咨询问题或条文关键词，例如：劳动合同法第四十七条、那赔偿金怎么算？"
+            />
+          </el-form-item>
+
+          <el-form-item label="检索模式">
+            <el-radio-group v-model="debugForm.mode" class="knowledge-mode-group">
+              <el-radio-button
+                v-for="item in RETRIEVAL_MODES"
+                :key="item.value"
+                :value="item.value"
+              >
+                {{ item.label }}
+              </el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+
           <el-form-item label="TopK">
             <div class="knowledge-debug-controls">
               <el-input-number v-model="debugForm.topK" :min="1" :max="10" />
               <el-button type="primary" icon="Search" :loading="debugLoading" @click="runSearchDebug">
-                执行检索
+                执行三路对比检索
               </el-button>
             </div>
           </el-form-item>
         </el-form>
 
-        <el-divider content-position="left">
-          命中结果（{{ debugResults.length }}）
-        </el-divider>
+        <!-- 顶部诊断信息栏 -->
+        <section v-if="debugSearched && debugReport" class="knowledge-diagnostic-bar">
+          <div class="knowledge-diagnostic-tags">
+            <span class="knowledge-status-badge" :class="embeddingModeClass">
+              向量引擎：{{ formatEmbeddingModeLabel(embeddingStatus.mode) }}
+            </span>
+            <span class="knowledge-status-badge is-neutral">
+              模型：{{ embeddingStatus.model || '未配置' }}
+            </span>
+            <span v-if="embeddingStatus.dimensions" class="knowledge-status-badge is-neutral">
+              维度：{{ embeddingStatus.dimensions }} 维
+            </span>
+            <span class="knowledge-status-badge is-accent">
+              主模式：{{ getRetrievalModeLabel(debugReport.mode || debugForm.mode) }}
+            </span>
+            <span
+              v-if="!embeddingStatus.remoteAvailable && embeddingStatus.lastErrorCode"
+              class="knowledge-status-badge is-danger"
+              :title="embeddingStatus.lastErrorCode"
+            >
+              降级原因：{{ embeddingStatus.lastErrorCode }}
+            </span>
+          </div>
 
-        <el-empty
-          v-if="!debugLoading && debugSearched && debugResults.length === 0"
-          description="未检索到达到阈值的相关法条，请尝试更换关键词"
-        />
-        <el-empty
-          v-else-if="!debugSearched"
-          description="输入问题并点击「执行检索」，可实时查看 BM25 + 条号/法规加权召回结果"
-        />
-
-        <div v-else class="knowledge-debug-list">
-          <article
-            v-for="(item, idx) in debugResults"
-            :key="item.chunkId ?? idx"
-            class="knowledge-debug-card"
-          >
-            <header class="knowledge-debug-card-header">
-              <div class="knowledge-debug-title">
-                <span class="knowledge-debug-rank">#{{ idx + 1 }}</span>
-                <span>《{{ item.docTitle || '法律法规' }}》{{ item.articleNo || '条文片段' }}</span>
-              </div>
-              <div class="knowledge-debug-meta">
-                <el-tag size="small" type="success" effect="plain">
-                  得分 {{ formatDebugScore(item.score) }}
+          <!-- 多轮指代改写对比框 -->
+          <div v-if="showRewritePanel" class="knowledge-rewrite-box">
+            <div class="knowledge-rewrite-header">
+              <span class="knowledge-rewrite-title">多轮指代改写（Query Rewrite）</span>
+              <div class="knowledge-rewrite-meta">
+                <el-tag :type="rewriteStrategyMeta.type" size="small" effect="plain">
+                  {{ rewriteStrategyMeta.label }}
                 </el-tag>
-                <span class="knowledge-muted-text">Chunk #{{ item.chunkId }}</span>
+                <span class="knowledge-status-badge is-neutral">
+                  耗时 {{ debugReport.rewriteLatencyMs ?? 0 }} ms
+                </span>
               </div>
-            </header>
-            <p class="knowledge-debug-snippet">{{ item.snippet }}</p>
-          </article>
-        </div>
+            </div>
+            <div class="knowledge-rewrite-flow">
+              <div class="knowledge-rewrite-node">
+                <span class="knowledge-rewrite-label">原追问</span>
+                <span class="knowledge-rewrite-text">{{ debugReport.originalQuery || debugForm.query }}</span>
+              </div>
+              <span class="knowledge-rewrite-arrow" aria-hidden="true">→</span>
+              <div class="knowledge-rewrite-node is-target">
+                <span class="knowledge-rewrite-label">改写后检索词</span>
+                <span class="knowledge-rewrite-text">
+                  {{ debugReport.rewrittenQuery || debugReport.originalQuery }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <el-empty
+          v-if="!debugSearched"
+          description="输入问题（可选填入前序追问上下文）并点击「执行三路对比检索」，实时对比 BM25、语义向量与 RRF 混合重排"
+        />
+
+        <template v-else-if="debugReport">
+          <el-tabs v-model="debugActiveTab" class="knowledge-debug-tabs">
+            <el-tab-pane
+              :label="`当前模式结果（${activeCitations.length}）`"
+              name="active"
+            />
+            <el-tab-pane
+              :label="`三路并列对比（BM25 ${bm25Results.length} / Vector ${vectorResults.length} / RRF ${hybridResults.length}）`"
+              name="compare"
+            />
+          </el-tabs>
+
+          <div
+            class="knowledge-compare-grid"
+            :class="{ 'is-single': debugActiveTab === 'active' }"
+          >
+            <section
+              v-for="group in visibleResultGroups"
+              :key="group.key"
+              class="knowledge-compare-column"
+            >
+              <header v-if="debugActiveTab === 'compare'" class="knowledge-compare-col-header">
+                <span class="knowledge-compare-col-title">{{ group.title }}</span>
+                <el-tag size="small" :type="group.tagType" effect="plain">
+                  {{ group.items.length }} 条
+                </el-tag>
+              </header>
+
+              <el-empty
+                v-if="!debugLoading && group.items.length === 0"
+                :image-size="56"
+                description="未检索到达到阈值的相关法条"
+              />
+
+              <div v-else class="knowledge-debug-list">
+                <article
+                  v-for="(item, idx) in group.items"
+                  :key="`${group.key}-${item.chunkId ?? idx}`"
+                  class="knowledge-debug-card"
+                >
+                  <header class="knowledge-debug-card-header">
+                    <div class="knowledge-debug-title">
+                      <span class="knowledge-debug-rank">#{{ idx + 1 }}</span>
+                      <span>《{{ item.docTitle || '法律法规' }}》{{ item.articleNo || '条文片段' }}</span>
+                    </div>
+                    <span class="knowledge-muted-text">Chunk #{{ item.chunkId }}</span>
+                  </header>
+
+                  <div class="knowledge-debug-metrics">
+                    <span
+                      v-if="hasScoreValue(item.rrfScore)"
+                      class="knowledge-metric-pill is-rrf"
+                    >
+                      RRF {{ formatDebugScore(item.rrfScore, 4) }}
+                    </span>
+                    <span
+                      class="knowledge-metric-pill"
+                      :class="hasRank(item.bm25Rank) || hasScoreValue(item.bm25Score) ? 'is-bm25' : 'is-miss'"
+                    >
+                      {{ formatChannelMetric('BM25', item.bm25Rank, item.bm25Score, 2) }}
+                    </span>
+                    <span
+                      class="knowledge-metric-pill"
+                      :class="hasRank(item.vectorRank) || hasScoreValue(item.vectorScore) ? 'is-vector' : 'is-miss'"
+                    >
+                      {{ formatChannelMetric('Vector', item.vectorRank, item.vectorScore, 4) }}
+                    </span>
+                    <span
+                      v-if="!hasScoreValue(item.rrfScore) && !hasScoreValue(item.bm25Score) && !hasScoreValue(item.vectorScore) && hasScoreValue(item.score)"
+                      class="knowledge-metric-pill is-rrf"
+                    >
+                      得分 {{ formatDebugScore(item.score, 2) }}
+                    </span>
+                  </div>
+
+                  <p class="knowledge-debug-snippet">{{ item.snippet }}</p>
+                </article>
+              </div>
+            </section>
+          </div>
+        </template>
       </div>
     </el-drawer>
   </div>
@@ -564,14 +731,15 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import {
   addDoc,
+  debugSearchKnowledge,
   delChunk,
   delDoc,
   getDoc,
   importDoc,
   listChunk,
   listDoc,
+  rebuildKnowledgeEmbeddings,
   rechunkDoc,
-  searchKnowledge,
   updateChunk,
   updateDoc
 } from '@/api/lawyer/knowledge'
@@ -579,7 +747,9 @@ import {
   KNOWLEDGE_CATEGORIES,
   KNOWLEDGE_STATUS,
   MAX_FILE_MB,
-  getKnowledgeCategoryLabel
+  RETRIEVAL_MODES,
+  getKnowledgeCategoryLabel,
+  getRetrievalModeLabel
 } from '@/constants/lawyer'
 
 const { proxy } = getCurrentInstance()
@@ -690,14 +860,95 @@ const chunkEditRules = {
   content: [{ required: true, message: '请输入条文正文', trigger: 'blur' }]
 }
 
-// 检索调试抽屉
+// 向量索引重建状态
+const rebuildingAll = ref(false)
+const rebuildingDoc = ref(false)
+
+// RAG 混合检索与多轮改写对比实验室
+const DEBUG_PRESETS = [
+  {
+    label: '示例1：辞退赔偿（多轮指代）',
+    historyContext: '前序问题：公司没提前通知直接把我辞退了，我干了三年半。',
+    query: '那赔偿金怎么算？'
+  },
+  {
+    label: '示例2：退还押金（多轮指代）',
+    historyContext: '前序问题：租房合同到期了房东验收完房子。',
+    query: '如果他一直拖着不退押金怎么办？'
+  }
+]
+
+const REWRITE_STRATEGY_META = {
+  llm: { label: 'LLM 语义改写', type: 'success' },
+  rule_fallback: { label: '规则实体兜底', type: 'warning' },
+  passthrough: { label: '直通未改写', type: 'info' }
+}
+
 const debugDrawerVisible = ref(false)
 const debugLoading = ref(false)
 const debugSearched = ref(false)
-const debugResults = ref([])
+const debugReport = ref(null)
+const debugActiveTab = ref('compare')
+const lastDebugHistoryContext = ref('')
 const debugForm = reactive({
-  q: '',
-  topK: 4
+  query: '',
+  topK: 4,
+  mode: 'hybrid_rrf',
+  historyContext: ''
+})
+
+const embeddingStatus = computed(() => debugReport.value?.embeddingStatus || {})
+
+const embeddingModeClass = computed(() => {
+  const mode = embeddingStatus.value.mode
+  if (mode === 'local_fallback') return 'is-warning'
+  if (embeddingStatus.value.remoteAvailable === false) return 'is-warning'
+  return 'is-success'
+})
+
+const showRewritePanel = computed(() => {
+  if (!debugReport.value) return false
+  return Boolean(
+    debugReport.value.rewritten ||
+    lastDebugHistoryContext.value ||
+    (debugReport.value.rewriteStrategy && debugReport.value.rewriteStrategy !== 'passthrough')
+  )
+})
+
+const rewriteStrategyMeta = computed(() => {
+  const strategy = debugReport.value?.rewriteStrategy || 'passthrough'
+  return REWRITE_STRATEGY_META[strategy] || { label: strategy, type: 'info' }
+})
+
+const activeCitations = computed(() => (
+  Array.isArray(debugReport.value?.citations) ? debugReport.value.citations : []
+))
+const bm25Results = computed(() => (
+  Array.isArray(debugReport.value?.bm25Results) ? debugReport.value.bm25Results : []
+))
+const vectorResults = computed(() => (
+  Array.isArray(debugReport.value?.vectorResults) ? debugReport.value.vectorResults : []
+))
+const hybridResults = computed(() => (
+  Array.isArray(debugReport.value?.hybridResults) ? debugReport.value.hybridResults : []
+))
+
+const visibleResultGroups = computed(() => {
+  if (debugActiveTab.value === 'active') {
+    return [
+      {
+        key: 'active',
+        title: getRetrievalModeLabel(debugReport.value?.mode || debugForm.mode),
+        tagType: 'primary',
+        items: activeCitations.value
+      }
+    ]
+  }
+  return [
+    { key: 'bm25', title: '纯 BM25 关键词', tagType: 'info', items: bm25Results.value },
+    { key: 'vector', title: '纯语义向量 (Vector)', tagType: 'warning', items: vectorResults.value },
+    { key: 'hybrid', title: 'RRF 混合重排', tagType: 'success', items: hybridResults.value }
+  ]
 })
 
 function buildQuery() {
@@ -1073,27 +1324,111 @@ async function handleChunkDelete(row) {
   }
 }
 
+function formatEmbeddingModeLabel(mode) {
+  if (mode === 'local_fallback') return '本地降级 (local_fallback)'
+  if (mode === 'remote' || mode === 'http') return `远程向量 (${mode})`
+  return mode || '未知模式'
+}
+
+function formatEmbeddingRebuildSummary(payload, docTitle) {
+  const updated = payload?.updatedChunks ?? 0
+  const totalCount = payload?.totalChunks ?? 0
+  const skipped = payload?.skippedChunks ?? 0
+  const model = payload?.model || '未知模型'
+  const mode = formatEmbeddingModeLabel(payload?.embeddingMode)
+  const duration = payload?.durationMs !== undefined && payload?.durationMs !== null
+    ? `${payload.durationMs} ms`
+    : '-'
+  const scopeLabel = docTitle ? `《${docTitle}》` : '全部启用法规'
+
+  return [
+    `重建范围：${scopeLabel}`,
+    `切片更新：${updated} / ${totalCount}（跳过 ${skipped}）`,
+    `当前模型：${model}`,
+    `向量模式：${mode}`,
+    `执行耗时：${duration}`
+  ].join('\n')
+}
+
+async function handleRebuildEmbeddings(docId) {
+  const isSingleDoc = docId !== undefined && docId !== null
+  const loadingRef = isSingleDoc ? rebuildingDoc : rebuildingAll
+  loadingRef.value = true
+  try {
+    const res = await rebuildKnowledgeEmbeddings(isSingleDoc ? docId : undefined)
+    const payload = res?.data && !Array.isArray(res.data) ? res.data : (res || {})
+    const summaryText = formatEmbeddingRebuildSummary(
+      payload,
+      isSingleDoc ? currentDoc.value?.title : ''
+    )
+    await ElMessageBox.alert(summaryText, '向量索引重建完成', {
+      type: payload?.embeddingMode === 'local_fallback' ? 'warning' : 'success',
+      confirmButtonText: '确定',
+      customClass: 'knowledge-rebuild-alert'
+    })
+  } catch {
+    // 异常由拦截器处理
+  } finally {
+    loadingRef.value = false
+  }
+}
+
 function openDebugDrawer() {
   debugDrawerVisible.value = true
 }
 
-function formatDebugScore(score) {
-  return typeof score === 'number' && !Number.isNaN(score) ? score.toFixed(2) : '0.00'
+function applyDebugPreset(preset) {
+  debugForm.historyContext = preset.historyContext
+  debugForm.query = preset.query
+}
+
+function clearDebugForm() {
+  debugForm.historyContext = ''
+  debugForm.query = ''
+}
+
+function hasScoreValue(val) {
+  return typeof val === 'number' && !Number.isNaN(val)
+}
+
+function hasRank(rank) {
+  return typeof rank === 'number' && !Number.isNaN(rank) && rank > 0
+}
+
+function formatDebugScore(score, digits = 2) {
+  return hasScoreValue(score) ? Number(score).toFixed(digits) : Number(0).toFixed(digits)
+}
+
+function formatChannelMetric(channel, rank, score, digits) {
+  if (!hasRank(rank) && !hasScoreValue(score)) {
+    return `${channel} 未进候选`
+  }
+  const rankPart = hasRank(rank) ? `#${rank}` : '#-'
+  const scorePart = hasScoreValue(score) ? formatDebugScore(score, digits) : '-'
+  return `${channel} ${rankPart} / ${scorePart}`
 }
 
 async function runSearchDebug() {
-  const q = debugForm.q.trim()
-  if (!q) {
+  const query = debugForm.query.trim()
+  if (!query) {
     ElMessage.warning('请输入测试问题或法条关键词')
     return
   }
+  const historyContext = debugForm.historyContext.trim()
+  lastDebugHistoryContext.value = historyContext
   debugLoading.value = true
   debugSearched.value = true
   try {
-    const res = await searchKnowledge(q, debugForm.topK)
-    debugResults.value = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
+    const res = await debugSearchKnowledge({
+      query,
+      topK: debugForm.topK,
+      mode: debugForm.mode,
+      historyContext
+    })
+    const payload = res?.data && !Array.isArray(res.data) ? res.data : (res || null)
+    debugReport.value = payload
   } catch {
-    debugResults.value = []
+    debugReport.value = null
   } finally {
     debugLoading.value = false
   }

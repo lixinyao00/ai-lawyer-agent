@@ -27,8 +27,11 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.github.pagehelper.PageHelper;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.lawyer.agent.AgentExecutionResult;
+import com.ruoyi.lawyer.agent.LawAgentOrchestrator;
 import com.ruoyi.lawyer.client.AiChatClient;
 import com.ruoyi.lawyer.client.AiClientException;
+import com.ruoyi.lawyer.config.LawyerAgentProperties;
 import com.ruoyi.lawyer.config.LawyerAiProperties;
 import com.ruoyi.lawyer.config.LawyerChatProperties;
 import com.ruoyi.lawyer.config.LawyerKnowledgeProperties;
@@ -49,6 +52,7 @@ import com.ruoyi.lawyer.support.SseEventWriter;
 import com.ruoyi.lawyer.vo.ChatMessageVO;
 import com.ruoyi.lawyer.vo.ChatReplyVO;
 import com.ruoyi.lawyer.vo.CitationVO;
+import com.ruoyi.lawyer.vo.ToolCallTraceVO;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -110,6 +114,14 @@ public class LawChatServiceImpl implements ILawChatService
     /** 多轮指代改写器；为 null 时回退 V1.0 短问题拼接逻辑 */
     @Autowired(required = false)
     private QueryRewriter queryRewriter;
+
+    /** ReAct Tool Calling 编排器；为 null 时回退 V1.0 直调模型 */
+    @Autowired(required = false)
+    private LawAgentOrchestrator agentOrchestrator;
+
+    /** 法律 Agent 配置；为 null 或 disabled 时回退 V1.0 直调模型 */
+    @Autowired(required = false)
+    private LawyerAgentProperties agentProperties;
 
     @Autowired
     private LawSessionLockService lockService;
@@ -219,14 +231,31 @@ public class LawChatServiceImpl implements ILawChatService
             reply.setUserMessageId(userMessage.getId());
             reply.setAssistantMessageId(assistantMessage.getId());
             reply.setCitations(citations);
+            reply.setRewrittenQuery(retrieval.rewrittenQuery);
+            reply.setRetrievalMode(retrieval.retrievalMode);
 
             try
             {
                 // 模型调用放在事务之外
-                String answer = generateReply(history, content, citations);
-                markAssistantResult(assistantMessage, STATUS_SUCCESS, answer, null, aiProperties.getModel());
-                reply.setStatus(STATUS_SUCCESS);
-                reply.setContent(answer);
+                if (isAgentEnabled())
+                {
+                    List<AiChatClient.ChatMessage> modelMessages = buildModelMessages(history, content, citations);
+                    AgentExecutionResult agentResult = agentOrchestrator.runSync(userId, sessionId, requestId,
+                            modelMessages, citations);
+                    applyAgentResult(assistantMessage, agentResult);
+                    markAssistantResult(assistantMessage, STATUS_SUCCESS, agentResult.getFinalContent(), null,
+                            aiProperties.getModel());
+                    reply.setStatus(STATUS_SUCCESS);
+                    reply.setContent(agentResult.getFinalContent());
+                    applyAgentResultToReply(reply, agentResult);
+                }
+                else
+                {
+                    String answer = generateReply(history, content, citations);
+                    markAssistantResult(assistantMessage, STATUS_SUCCESS, answer, null, aiProperties.getModel());
+                    reply.setStatus(STATUS_SUCCESS);
+                    reply.setContent(answer);
+                }
             }
             catch (Exception e)
             {
@@ -308,7 +337,7 @@ public class LawChatServiceImpl implements ILawChatService
 
             String sessionTitle = resolveSessionTitle(lockedSession, content);
             SseEmitter emitter = new SseEmitter(chatProperties.getSseTimeout());
-            StreamContext context = new StreamContext(sessionId, requestId, sessionTitle,
+            StreamContext context = new StreamContext(sessionId, userId, requestId, sessionTitle,
                     userMessage.getId(), assistantMessage.getId(), history, content, retrieval.rewrittenQuery,
                     retrieval.retrievalMode, citations, new SseEventWriter(emitter, objectMapper), token);
 
@@ -370,31 +399,59 @@ public class LawChatServiceImpl implements ILawChatService
 
             List<AiChatClient.ChatMessage> modelMessages = buildModelMessages(context.history, context.content,
                     context.citations);
-            String answer = aiChatClient.streamChat(modelMessages, delta -> {
-                context.fullText.append(delta);
-                try
-                {
-                    Map<String, Object> data = new LinkedHashMap<>();
-                    data.put("content", delta);
-                    context.writer.send("delta", data);
-                }
-                catch (IOException e)
-                {
-                    // 客户端已断开：置取消标志，让模型读取尽快停止
-                    context.cancel();
-                    throw new ClientAbortedException(e);
-                }
-            }, context.cancelled::get);
-
-            if (context.cancelled.get())
+            if (isAgentEnabled())
             {
-                handleAborted(context, assistantMessage, answer);
-                return;
+                AgentExecutionResult agentResult = agentOrchestrator.runStream(context.userId, context.sessionId,
+                        context.requestId, modelMessages, context.citations, agentEventSink(context),
+                        context.cancelled::get);
+                applyAgentResult(assistantMessage, agentResult);
+                if (context.cancelled.get())
+                {
+                    String partial = agentResult.getFinalContent();
+                    if (StringUtils.isEmpty(partial))
+                    {
+                        partial = context.fullText.toString();
+                    }
+                    handleAborted(context, assistantMessage, partial);
+                    return;
+                }
+                markAssistantResult(assistantMessage, STATUS_SUCCESS, agentResult.getFinalContent(), null,
+                        aiProperties.getModel());
+                context.writer.send("done", doneData(STATUS_SUCCESS, assistantMessage.getId(),
+                        aiProperties.getModel(), agentResult.getFinalContent(), agentResult.getCitations(),
+                        context.rewrittenQuery, context.retrievalMode, agentResult.getToolCalls(),
+                        agentResult.getPromptTokens(), agentResult.getCompletionTokens(),
+                        agentResult.getTotalTokens(), agentResult.getTtftMs(), agentResult.getTotalLatencyMs()));
             }
+            else
+            {
+                String answer = aiChatClient.streamChat(modelMessages, delta -> {
+                    context.fullText.append(delta);
+                    try
+                    {
+                        Map<String, Object> data = new LinkedHashMap<>();
+                        data.put("content", delta);
+                        context.writer.send("delta", data);
+                    }
+                    catch (IOException e)
+                    {
+                        // 客户端已断开：置取消标志，让模型读取尽快停止
+                        context.cancel();
+                        throw new ClientAbortedException(e);
+                    }
+                }, context.cancelled::get);
 
-            markAssistantResult(assistantMessage, STATUS_SUCCESS, answer, null, aiProperties.getModel());
-            context.writer.send("done", doneData(STATUS_SUCCESS, assistantMessage.getId(), aiProperties.getModel(),
-                    answer, context.citations, context.rewrittenQuery, context.retrievalMode));
+                if (context.cancelled.get())
+                {
+                    handleAborted(context, assistantMessage, answer);
+                    return;
+                }
+
+                markAssistantResult(assistantMessage, STATUS_SUCCESS, answer, null, aiProperties.getModel());
+                context.writer.send("done", doneData(STATUS_SUCCESS, assistantMessage.getId(),
+                        aiProperties.getModel(), answer, context.citations, context.rewrittenQuery,
+                        context.retrievalMode, Collections.emptyList(), null, null, null, null, null));
+            }
             context.writer.complete();
         }
         catch (ClientAbortedException e)
@@ -487,6 +544,13 @@ public class LawChatServiceImpl implements ILawChatService
         Long assistantMessageId = assistantMessage == null ? null : assistantMessage.getId();
         String title = session == null ? DEFAULT_TITLE : session.getTitle();
         List<CitationVO> citations = parseCitations(assistantMessage);
+        List<ToolCallTraceVO> toolCalls = assistantMessage == null ? new ArrayList<>()
+                : ChatMessageConverter.parseToolCalls(assistantMessage.getToolCallsJson(), objectMapper);
+        Integer promptTokens = assistantMessage == null ? null : assistantMessage.getPromptTokens();
+        Integer completionTokens = assistantMessage == null ? null : assistantMessage.getCompletionTokens();
+        Integer totalTokens = assistantMessage == null ? null : assistantMessage.getTotalTokens();
+        Long ttftMs = assistantMessage == null ? null : assistantMessage.getTtftMs();
+        Long totalLatencyMs = assistantMessage == null ? null : assistantMessage.getTotalLatencyMs();
 
         try
         {
@@ -507,7 +571,8 @@ public class LawChatServiceImpl implements ILawChatService
             {
                 writer.send("done", doneData(STATUS_PENDING, assistantMessageId, null, "", citations,
                         assistantMessage == null ? null : assistantMessage.getRewrittenQuery(),
-                        assistantMessage == null ? null : assistantMessage.getRetrievalMode()));
+                        assistantMessage == null ? null : assistantMessage.getRetrievalMode(), toolCalls,
+                        promptTokens, completionTokens, totalTokens, ttftMs, totalLatencyMs));
             }
             else if (STATUS_SUCCESS.equals(assistantMessage.getStatus()))
             {
@@ -516,7 +581,8 @@ public class LawChatServiceImpl implements ILawChatService
                 writer.send("delta", delta);
                 writer.send("done", doneData(STATUS_SUCCESS, assistantMessageId, assistantMessage.getModelName(),
                         assistantMessage.getContent() == null ? "" : assistantMessage.getContent(), citations,
-                        assistantMessage.getRewrittenQuery(), assistantMessage.getRetrievalMode()));
+                        assistantMessage.getRewrittenQuery(), assistantMessage.getRetrievalMode(), toolCalls,
+                        promptTokens, completionTokens, totalTokens, ttftMs, totalLatencyMs));
             }
             else
             {
@@ -557,7 +623,9 @@ public class LawChatServiceImpl implements ILawChatService
      * done 事件数据
      */
     private Map<String, Object> doneData(String status, Long assistantMessageId, String modelName, String content,
-            List<CitationVO> citations, String rewrittenQuery, String retrievalMode)
+            List<CitationVO> citations, String rewrittenQuery, String retrievalMode,
+            List<ToolCallTraceVO> toolCalls, Integer promptTokens, Integer completionTokens, Integer totalTokens,
+            Long ttftMs, Long totalLatencyMs)
     {
         Map<String, Object> done = new LinkedHashMap<>();
         done.put("status", status);
@@ -567,6 +635,12 @@ public class LawChatServiceImpl implements ILawChatService
         done.put("citations", citations == null ? Collections.emptyList() : citations);
         done.put("rewrittenQuery", rewrittenQuery);
         done.put("retrievalMode", retrievalMode);
+        done.put("toolCalls", toolCalls == null ? Collections.emptyList() : toolCalls);
+        done.put("promptTokens", promptTokens);
+        done.put("completionTokens", completionTokens);
+        done.put("totalTokens", totalTokens);
+        done.put("ttftMs", ttftMs);
+        done.put("totalLatencyMs", totalLatencyMs);
         return done;
     }
 
@@ -700,6 +774,107 @@ public class LawChatServiceImpl implements ILawChatService
     }
 
     /**
+     * 是否启用 ReAct 法律 Agent；任一协作 Bean 缺失或配置关闭时回退 V1.0
+     */
+    private boolean isAgentEnabled()
+    {
+        return agentOrchestrator != null && agentProperties != null && agentProperties.isEnabled();
+    }
+
+    /**
+     * 把 Agent 执行结果写回消息实体（citation、工具轨迹、Token 与延迟指标）
+     */
+    private void applyAgentResult(LawChatMessage assistantMessage, AgentExecutionResult result)
+    {
+        if (result == null)
+        {
+            return;
+        }
+        assistantMessage.setCitationsJson(serializeCitations(result.getCitations()));
+        assistantMessage.setToolCallsJson(serializeToolCalls(result.getToolCalls()));
+        assistantMessage.setPromptTokens(result.getPromptTokens());
+        assistantMessage.setCompletionTokens(result.getCompletionTokens());
+        assistantMessage.setTotalTokens(result.getTotalTokens());
+        assistantMessage.setTtftMs(result.getTtftMs());
+        assistantMessage.setTotalLatencyMs(result.getTotalLatencyMs());
+    }
+
+    /**
+     * 把 Agent 执行结果写入同步返回 VO
+     */
+    private void applyAgentResultToReply(ChatReplyVO reply, AgentExecutionResult result)
+    {
+        if (result == null)
+        {
+            return;
+        }
+        reply.setCitations(result.getCitations());
+        reply.setToolCalls(result.getToolCalls());
+        reply.setPromptTokens(result.getPromptTokens());
+        reply.setCompletionTokens(result.getCompletionTokens());
+        reply.setTotalTokens(result.getTotalTokens());
+        reply.setTtftMs(result.getTtftMs());
+        reply.setTotalLatencyMs(result.getTotalLatencyMs());
+    }
+
+    /**
+     * 将编排器回调转换为 SSE 事件；写失败时置取消标志，避免异常中断整条流
+     */
+    private LawAgentOrchestrator.AgentEventSink agentEventSink(StreamContext context)
+    {
+        return new LawAgentOrchestrator.AgentEventSink()
+        {
+            @Override
+            public void onCitation(List<CitationVO> citations)
+            {
+                context.citations.clear();
+                if (citations != null)
+                {
+                    context.citations.addAll(citations);
+                }
+                sendEventQuietly(context, "citation", Collections.singletonMap("citations", context.citations));
+            }
+
+            @Override
+            public void onToolCall(Map<String, Object> event)
+            {
+                sendEventQuietly(context, "tool_call", event);
+            }
+
+            @Override
+            public void onToolResult(Map<String, Object> event)
+            {
+                sendEventQuietly(context, "tool_result", event);
+            }
+
+            @Override
+            public void onDelta(String delta)
+            {
+                context.fullText.append(delta);
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("content", delta);
+                sendEventQuietly(context, "delta", data);
+            }
+        };
+    }
+
+    private void sendEventQuietly(StreamContext context, String event, Object data)
+    {
+        if (context.cancelled.get())
+        {
+            return;
+        }
+        try
+        {
+            context.writer.send(event, data);
+        }
+        catch (IOException e)
+        {
+            context.cancel();
+        }
+    }
+
+    /**
      * 检索本次问题相关法条；优先使用 QueryRewriter 改写多轮指代追问，
      * 未注入改写器时回退 V1.0 的“短问题拼接上一条用户问题”逻辑。异常不阻断聊天。
      */
@@ -803,6 +978,26 @@ public class LawChatServiceImpl implements ILawChatService
         catch (Exception e)
         {
             log.warn("法条引用序列化失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 序列化工具调用轨迹，空列表返回 null（落库为 NULL）
+     */
+    private String serializeToolCalls(List<ToolCallTraceVO> toolCalls)
+    {
+        if (toolCalls == null || toolCalls.isEmpty())
+        {
+            return null;
+        }
+        try
+        {
+            return objectMapper.writeValueAsString(toolCalls);
+        }
+        catch (Exception e)
+        {
+            log.warn("工具调用轨迹序列化失败: {}", e.getMessage());
             return null;
         }
     }
@@ -1011,6 +1206,14 @@ public class LawChatServiceImpl implements ILawChatService
         reply.setContent(assistantMessage.getContent());
         reply.setErrorCode(assistantMessage.getErrorCode());
         reply.setCitations(parseCitations(assistantMessage));
+        reply.setRewrittenQuery(assistantMessage.getRewrittenQuery());
+        reply.setRetrievalMode(assistantMessage.getRetrievalMode());
+        reply.setToolCalls(ChatMessageConverter.parseToolCalls(assistantMessage.getToolCallsJson(), objectMapper));
+        reply.setPromptTokens(assistantMessage.getPromptTokens());
+        reply.setCompletionTokens(assistantMessage.getCompletionTokens());
+        reply.setTotalTokens(assistantMessage.getTotalTokens());
+        reply.setTtftMs(assistantMessage.getTtftMs());
+        reply.setTotalLatencyMs(assistantMessage.getTotalLatencyMs());
         if (STATUS_FAILED.equals(assistantMessage.getStatus()))
         {
             reply.setErrorMessage(REPLAY_FAILED_MESSAGE);
@@ -1048,6 +1251,8 @@ public class LawChatServiceImpl implements ILawChatService
     {
         private final Long sessionId;
 
+        private final Long userId;
+
         private final String requestId;
 
         private final String sessionTitle;
@@ -1074,12 +1279,13 @@ public class LawChatServiceImpl implements ILawChatService
 
         private final StringBuilder fullText = new StringBuilder();
 
-        private StreamContext(Long sessionId, String requestId, String sessionTitle, Long userMessageId,
-                Long assistantMessageId, List<AiChatClient.ChatMessage> history, String content,
+        private StreamContext(Long sessionId, Long userId, String requestId, String sessionTitle,
+                Long userMessageId, Long assistantMessageId, List<AiChatClient.ChatMessage> history, String content,
                 String rewrittenQuery, String retrievalMode, List<CitationVO> citations, SseEventWriter writer,
                 String token)
         {
             this.sessionId = sessionId;
+            this.userId = userId;
             this.requestId = requestId;
             this.sessionTitle = sessionTitle;
             this.userMessageId = userMessageId;
@@ -1088,7 +1294,7 @@ public class LawChatServiceImpl implements ILawChatService
             this.content = content;
             this.rewrittenQuery = rewrittenQuery;
             this.retrievalMode = retrievalMode;
-            this.citations = citations;
+            this.citations = citations == null ? new ArrayList<>() : new ArrayList<>(citations);
             this.writer = writer;
             this.token = token;
         }

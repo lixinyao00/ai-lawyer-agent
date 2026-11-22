@@ -46,6 +46,25 @@ public class LawChatMessage extends BaseEntity
     /** 实际生效检索模式：bm25 / vector / hybrid_rrf */
     private String retrievalMode;
 
+    /** Agent 工具调用轨迹 JSON 数组（仅 assistant 写入），对外只暴露解析后的 toolCalls */
+    @JsonIgnore
+    private String toolCallsJson;
+
+    /** 本轮累计输入 Token 数（多轮 Agent 迭代求和） */
+    private Integer promptTokens;
+
+    /** 本轮累计输出 Token 数（多轮 Agent 迭代求和） */
+    private Integer completionTokens;
+
+    /** 本轮总 Token 数 */
+    private Integer totalTokens;
+
+    /** 首字延迟（毫秒） */
+    private Long ttftMs;
+
+    /** 端到端总耗时（毫秒） */
+    private Long totalLatencyMs;
+
     public Long getId()
     {
         return id;
@@ -154,5 +173,65 @@ public class LawChatMessage extends BaseEntity
     public void setRetrievalMode(String retrievalMode)
     {
         this.retrievalMode = retrievalMode;
+    }
+
+    public String getToolCallsJson()
+    {
+        return toolCallsJson;
+    }
+
+    public void setToolCallsJson(String toolCallsJson)
+    {
+        this.toolCallsJson = toolCallsJson;
+    }
+
+    public Integer getPromptTokens()
+    {
+        return promptTokens;
+    }
+
+    public void setPromptTokens(Integer promptTokens)
+    {
+        this.promptTokens = promptTokens;
+    }
+
+    public Integer getCompletionTokens()
+    {
+        return completionTokens;
+    }
+
+    public void setCompletionTokens(Integer completionTokens)
+    {
+        this.completionTokens = completionTokens;
+    }
+
+    public Integer getTotalTokens()
+    {
+        return totalTokens;
+    }
+
+    public void setTotalTokens(Integer totalTokens)
+    {
+        this.totalTokens = totalTokens;
+    }
+
+    public Long getTtftMs()
+    {
+        return ttftMs;
+    }
+
+    public void setTtftMs(Long ttftMs)
+    {
+        this.ttftMs = ttftMs;
+    }
+
+    public Long getTotalLatencyMs()
+    {
+        return totalLatencyMs;
+    }
+
+    public void setTotalLatencyMs(Long totalLatencyMs)
+    {
+        this.totalLatencyMs = totalLatencyMs;
     }
 }

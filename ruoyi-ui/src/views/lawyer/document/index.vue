@@ -377,7 +377,15 @@ async function handleNewDraft() {
   dynamicFormRef.value?.clearValidate()
 }
 
-async function handleSelectDraft(id) {
+function parseDraftId(raw) {
+  const num = Number(raw)
+  return Number.isInteger(num) && num > 0 ? num : null
+}
+
+async function handleSelectDraft(idOrDraft) {
+  const id = typeof idOrDraft === 'object' && idOrDraft !== null
+    ? parseDraftId(idOrDraft.id)
+    : parseDraftId(idOrDraft)
   if (!id) return
   closeMobileDrawer()
   detailLoading.value = true
@@ -503,6 +511,16 @@ async function handleAccount(command) {
   }
 }
 
+watch(
+  () => route.query.draftId,
+  async (nextDraftId) => {
+    const id = parseDraftId(nextDraftId)
+    if (id && id !== activeDraft.value?.id) {
+      await handleSelectDraft({ id })
+    }
+  }
+)
+
 onMounted(async () => {
   await Promise.all([
     loadTemplates().catch(() => {}),
@@ -511,6 +529,10 @@ onMounted(async () => {
   if (!selectedTemplateCode.value && templates.value.length) {
     selectedTemplateCode.value = templates.value[0].code
     formModel.value = buildFormModel(templates.value[0])
+  }
+  const initialDraftId = parseDraftId(route.query.draftId)
+  if (initialDraftId) {
+    await handleSelectDraft({ id: initialDraftId })
   }
 })
 </script>

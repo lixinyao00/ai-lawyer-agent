@@ -30,8 +30,34 @@
             </h4>
           </div>
           <div class="citation-card-actions">
-            <span v-if="hasScore(item.score)" class="citation-score-tag">
-              相关度 {{ formatScore(item.score) }}
+            <span
+              v-if="getModeMeta(item)"
+              class="citation-mode-tag"
+              :class="getModeMeta(item).className"
+              :title="buildCitationMetaTooltip(item)"
+            >
+              {{ getModeMeta(item).label }}
+            </span>
+            <span
+              v-if="hasRank(item.bm25Rank)"
+              class="citation-rank-tag is-bm25"
+              :title="hasScore(item.bm25Score) ? `BM25 得分 ${formatScore(item.bm25Score, 2)}` : undefined"
+            >
+              BM25 #{{ item.bm25Rank }}
+            </span>
+            <span
+              v-if="hasRank(item.vectorRank)"
+              class="citation-rank-tag is-vector"
+              :title="hasScore(item.vectorScore) ? `向量余弦相似度 ${formatScore(item.vectorScore, 4)}` : undefined"
+            >
+              Vector #{{ item.vectorRank }}
+            </span>
+            <span
+              v-if="resolveDisplayScore(item)"
+              class="citation-score-tag"
+              :title="buildCitationMetaTooltip(item)"
+            >
+              {{ resolveDisplayScore(item) }}
             </span>
             <button
               type="button"
@@ -93,12 +119,69 @@ function cardKey(item, idx) {
   return `citation-${item.docId || 'doc'}-${idx}`
 }
 
+const CITATION_MODE_META = {
+  hybrid_rrf: { label: 'RRF 混合', className: 'is-hybrid' },
+  bm25: { label: 'BM25', className: 'is-bm25' },
+  vector: { label: 'Vector 语义', className: 'is-vector' }
+}
+
 function hasScore(score) {
   return typeof score === 'number' && !Number.isNaN(score)
 }
 
-function formatScore(score) {
-  return Number(score).toFixed(2)
+function hasRank(rank) {
+  return typeof rank === 'number' && !Number.isNaN(rank) && rank > 0
+}
+
+function formatScore(score, digits = 2) {
+  return Number(score).toFixed(digits)
+}
+
+function getEffectiveMode(item) {
+  if (item?.retrievalMode) return item.retrievalMode
+  if (hasScore(item?.rrfScore)) return 'hybrid_rrf'
+  if (hasRank(item?.bm25Rank) && hasRank(item?.vectorRank)) return 'hybrid_rrf'
+  if (hasRank(item?.vectorRank) || hasScore(item?.vectorScore)) return 'vector'
+  if (hasRank(item?.bm25Rank) || hasScore(item?.bm25Score)) return 'bm25'
+  return ''
+}
+
+function getModeMeta(item) {
+  const mode = getEffectiveMode(item)
+  if (!mode) return null
+  return CITATION_MODE_META[mode] || { label: mode, className: 'is-hybrid' }
+}
+
+function resolveDisplayScore(item) {
+  const mode = getEffectiveMode(item)
+  if (mode === 'hybrid_rrf') {
+    const val = hasScore(item.rrfScore) ? item.rrfScore : item.score
+    return hasScore(val) ? `RRF ${formatScore(val, 4)}` : ''
+  }
+  if (mode === 'vector') {
+    const val = hasScore(item.vectorScore) ? item.vectorScore : item.score
+    return hasScore(val) ? `相似度 ${formatScore(val, 4)}` : ''
+  }
+  const val = hasScore(item.bm25Score) ? item.bm25Score : item.score
+  return hasScore(val) ? `相关度 ${formatScore(val, 2)}` : ''
+}
+
+function buildCitationMetaTooltip(item) {
+  const parts = []
+  if (hasRank(item.bm25Rank) || hasScore(item.bm25Score)) {
+    const rankText = hasRank(item.bm25Rank) ? `#${item.bm25Rank}` : '-'
+    const scoreText = hasScore(item.bm25Score) ? formatScore(item.bm25Score, 2) : '-'
+    parts.push(`BM25: ${rankText} (${scoreText})`)
+  }
+  if (hasRank(item.vectorRank) || hasScore(item.vectorScore)) {
+    const rankText = hasRank(item.vectorRank) ? `#${item.vectorRank}` : '-'
+    const scoreText = hasScore(item.vectorScore) ? formatScore(item.vectorScore, 4) : '-'
+    parts.push(`Vector: ${rankText} (${scoreText})`)
+  }
+  if (hasScore(item.rrfScore)) {
+    parts.push(`RRF: ${formatScore(item.rrfScore, 4)}`)
+  }
+  return parts.length > 0 ? parts.join(' | ') : undefined
 }
 
 function isLongSnippet(snippet) {

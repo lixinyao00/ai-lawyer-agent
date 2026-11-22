@@ -509,8 +509,56 @@ html.dark .lawyer-surface {
 
 .citation-card-actions {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+
+.citation-mode-tag,
+.citation-rank-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.citation-mode-tag.is-hybrid {
+  border-color: color-mix(in srgb, var(--law-accent) 32%, var(--law-line));
+  background: var(--law-wash);
+  color: var(--law-accent);
+}
+
+.citation-mode-tag.is-bm25,
+.citation-rank-tag.is-bm25 {
+  border-color: #c8daf5;
+  background: #edf4ff;
+  color: #29599c;
+}
+
+.citation-mode-tag.is-vector,
+.citation-rank-tag.is-vector {
+  border-color: #decaf6;
+  background: #f5effe;
+  color: #6538a6;
+}
+
+html.dark .lawyer-surface .citation-mode-tag.is-bm25,
+html.dark .lawyer-surface .citation-rank-tag.is-bm25 {
+  border-color: #364e70;
+  background: #1f2c3f;
+  color: #9dc2f5;
+}
+
+html.dark .lawyer-surface .citation-mode-tag.is-vector,
+html.dark .lawyer-surface .citation-rank-tag.is-vector {
+  border-color: #4f3a70;
+  background: #2b213c;
+  color: #ceb0fa;
 }
 
 .citation-score-tag {
@@ -2839,3 +2887,893 @@ html.dark .lawyer-surface .doc-a4-paper {
     font-size: 19px;
   }
 }
+
+/* ==========================================================================
+   V2.0 M5 知识库 RAG 混合检索与多轮改写对比实验室
+   ========================================================================== */
+.knowledge-debug-form .el-form-item {
+  margin-bottom: 12px;
+}
+
+.knowledge-debug-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.knowledge-mode-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.knowledge-diagnostic-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-panel);
+}
+
+.knowledge-diagnostic-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.knowledge-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border: 1px solid var(--law-line);
+  border-radius: 999px;
+  background: var(--law-card);
+  color: var(--law-ink);
+  font-size: 12px;
+  font-weight: 560;
+  line-height: 1.5;
+}
+
+.knowledge-status-badge.is-neutral {
+  color: var(--law-muted);
+}
+
+.knowledge-status-badge.is-accent {
+  border-color: color-mix(in srgb, var(--law-accent) 28%, var(--law-line));
+  background: var(--law-wash);
+  color: var(--law-accent);
+}
+
+.knowledge-status-badge.is-success {
+  border-color: var(--law-risk-low-border);
+  background: var(--law-risk-low-bg);
+  color: var(--law-risk-low);
+}
+
+.knowledge-status-badge.is-warning {
+  border-color: var(--law-risk-medium-border);
+  background: var(--law-risk-medium-bg);
+  color: var(--law-risk-medium);
+}
+
+.knowledge-status-badge.is-danger {
+  border-color: var(--law-risk-high-border);
+  background: var(--law-risk-high-bg);
+  color: var(--law-risk-high);
+}
+
+.knowledge-rewrite-box {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--law-accent) 26%, var(--law-line));
+  border-radius: 10px;
+  background: var(--law-card);
+}
+
+.knowledge-rewrite-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.knowledge-rewrite-title {
+  font-size: 12.5px;
+  font-weight: 680;
+  color: var(--law-accent);
+}
+
+.knowledge-rewrite-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.knowledge-rewrite-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.knowledge-rewrite-node {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--law-line);
+  border-radius: 8px;
+  background: var(--law-panel);
+  min-width: 0;
+}
+
+.knowledge-rewrite-node.is-target {
+  border-color: color-mix(in srgb, var(--law-accent) 34%, var(--law-line));
+  background: var(--law-wash);
+}
+
+.knowledge-rewrite-label {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--law-muted);
+}
+
+.knowledge-rewrite-node.is-target .knowledge-rewrite-label {
+  color: var(--law-accent);
+}
+
+.knowledge-rewrite-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--law-ink);
+  overflow-wrap: anywhere;
+}
+
+.knowledge-rewrite-arrow {
+  color: var(--law-accent);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.knowledge-debug-tabs .el-tabs__header {
+  margin-bottom: 10px;
+}
+
+.knowledge-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.knowledge-compare-grid.is-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.knowledge-compare-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-card);
+}
+
+.knowledge-compare-grid.is-single .knowledge-compare-column {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.knowledge-compare-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--law-line);
+}
+
+.knowledge-compare-col-title {
+  font-size: 13px;
+  font-weight: 680;
+  color: var(--law-ink);
+}
+
+.knowledge-debug-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.knowledge-metric-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.knowledge-metric-pill.is-rrf {
+  border-color: color-mix(in srgb, var(--law-accent) 32%, var(--law-line));
+  background: var(--law-wash);
+  color: var(--law-accent);
+}
+
+.knowledge-metric-pill.is-bm25 {
+  border-color: #c8daf5;
+  background: #edf4ff;
+  color: #29599c;
+}
+
+.knowledge-metric-pill.is-vector {
+  border-color: #decaf6;
+  background: #f5effe;
+  color: #6538a6;
+}
+
+.knowledge-metric-pill.is-miss {
+  background: var(--law-card);
+  color: var(--law-muted);
+  font-weight: 500;
+}
+
+html.dark .lawyer-surface .knowledge-metric-pill.is-bm25 {
+  border-color: #364e70;
+  background: #1f2c3f;
+  color: #9dc2f5;
+}
+
+html.dark .lawyer-surface .knowledge-metric-pill.is-vector {
+  border-color: #4f3a70;
+  background: #2b213c;
+  color: #ceb0fa;
+}
+
+.knowledge-rebuild-alert .el-message-box__message {
+  white-space: pre-line;
+  line-height: 1.7;
+}
+
+@media (max-width: 960px) {
+  .knowledge-compare-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-rewrite-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-rewrite-arrow {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+}
+
+/* ==========================================================================
+   V2.0 M6 ReAct Agent 工具调用轨迹与消息性能指标
+   ========================================================================== */
+.agent-trace-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.agent-rewrite-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--law-accent) 22%, var(--law-line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--law-wash) 62%, var(--law-card));
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.agent-rewrite-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--law-ink);
+}
+
+.agent-rewrite-icon {
+  flex: none;
+  color: var(--law-accent);
+  font-size: 14px;
+}
+
+.agent-rewrite-text {
+  overflow-wrap: anywhere;
+}
+
+.agent-retrieval-pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--law-accent) 28%, var(--law-line));
+  border-radius: 999px;
+  background: var(--law-card);
+  color: var(--law-accent);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.agent-timeline-card {
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-panel);
+  overflow: hidden;
+  transition: border-color .16s ease;
+}
+
+.agent-timeline-card:hover {
+  border-color: color-mix(in srgb, var(--law-accent) 28%, var(--law-line));
+}
+
+.agent-timeline-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  width: 100%;
+  padding: 9px 13px;
+  border: 0;
+  background: transparent;
+  color: var(--law-ink);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .16s ease;
+}
+
+.agent-timeline-header:hover {
+  background: var(--law-hover);
+}
+
+.agent-timeline-header:focus-visible {
+  outline: 2px solid var(--law-accent);
+  outline-offset: -2px;
+}
+
+.agent-timeline-header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.agent-timeline-arrow {
+  color: var(--law-muted);
+  font-size: 12px;
+  transition: transform .18s ease;
+}
+
+.agent-timeline-arrow.is-expanded {
+  transform: rotate(90deg);
+}
+
+.agent-timeline-cpu {
+  color: var(--law-accent);
+  font-size: 15px;
+}
+
+.agent-timeline-title {
+  color: var(--law-ink);
+  font-weight: 650;
+}
+
+.agent-overall-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border: 1px solid var(--law-line);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.agent-overall-badge.is-running {
+  border-color: #c8daf5;
+  background: #edf4ff;
+  color: #29599c;
+}
+
+.agent-overall-badge.is-success {
+  border-color: var(--law-risk-low-border);
+  background: var(--law-risk-low-bg);
+  color: var(--law-risk-low);
+}
+
+html.dark .lawyer-surface .agent-overall-badge.is-running {
+  border-color: #364e70;
+  background: #1f2c3f;
+  color: #9dc2f5;
+}
+
+.agent-timeline-body {
+  padding: 4px 13px 12px;
+}
+
+.agent-step-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 0;
+}
+
+.agent-step-item {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.agent-step-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 20px;
+  padding-top: 2px;
+}
+
+.agent-step-dot {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 14px;
+  background: var(--law-card);
+  border: 1px solid var(--law-line);
+}
+
+.agent-step-dot.is-running {
+  border-color: #9dc2f5;
+  color: #29599c;
+  background: #edf4ff;
+}
+
+.agent-step-dot.is-success {
+  border-color: var(--law-risk-low-border);
+  color: var(--law-risk-low);
+  background: var(--law-risk-low-bg);
+}
+
+.agent-step-dot.is-error {
+  border-color: var(--law-risk-high-border);
+  color: var(--law-risk-high);
+  background: var(--law-risk-high-bg);
+}
+
+html.dark .lawyer-surface .agent-step-dot.is-running {
+  border-color: #364e70;
+  color: #9dc2f5;
+  background: #1f2c3f;
+}
+
+.agent-step-line {
+  flex: 1;
+  width: 1.5px;
+  min-height: 16px;
+  margin: 3px 0;
+  background: var(--law-line);
+}
+
+.agent-step-content {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 11px;
+  margin-bottom: 8px;
+  border: 1px solid var(--law-line);
+  border-radius: 10px;
+  background: var(--law-card);
+}
+
+.agent-step-item.is-last .agent-step-content {
+  margin-bottom: 0;
+}
+
+.agent-step-item.is-error .agent-step-content {
+  border-color: var(--law-risk-medium-border);
+  background: color-mix(in srgb, var(--law-risk-medium-bg) 45%, var(--law-card));
+}
+
+.agent-step-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.agent-step-index {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--law-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-tool-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 640;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.agent-tool-tag.is-primary {
+  border-color: #c8daf5;
+  background: #edf4ff;
+  color: #29599c;
+}
+
+.agent-tool-tag.is-warning {
+  border-color: var(--law-risk-medium-border);
+  background: var(--law-risk-medium-bg);
+  color: var(--law-risk-medium);
+}
+
+.agent-tool-tag.is-success {
+  border-color: var(--law-risk-low-border);
+  background: var(--law-risk-low-bg);
+  color: var(--law-risk-low);
+}
+
+.agent-tool-tag.is-info {
+  background: var(--law-panel);
+  color: var(--law-muted);
+}
+
+html.dark .lawyer-surface .agent-tool-tag.is-primary {
+  border-color: #364e70;
+  background: #1f2c3f;
+  color: #9dc2f5;
+}
+
+.agent-step-display-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--law-ink);
+  overflow-wrap: anywhere;
+}
+
+.agent-step-meta-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.agent-duration-badge {
+  padding: 1px 6px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  background: var(--law-panel);
+  color: var(--law-muted);
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.agent-step-status-pill {
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.agent-step-status-pill.is-running {
+  background: #edf4ff;
+  color: #29599c;
+}
+
+.agent-step-status-pill.is-success {
+  background: var(--law-risk-low-bg);
+  color: var(--law-risk-low);
+}
+
+.agent-step-status-pill.is-error {
+  background: var(--law-risk-high-bg);
+  color: var(--law-risk-high);
+}
+
+html.dark .lawyer-surface .agent-step-status-pill.is-running {
+  background: #1f2c3f;
+  color: #9dc2f5;
+}
+
+.agent-self-heal-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--law-risk-medium-border);
+  border-radius: 7px;
+  background: var(--law-risk-medium-bg);
+  color: var(--law-risk-medium);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.agent-step-summary {
+  margin: 6px 0 0;
+  color: var(--law-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.agent-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.agent-detail-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--law-line);
+  border-radius: 7px;
+  background: var(--law-panel);
+  color: var(--law-muted);
+  font-size: 12px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.agent-detail-toggle:hover {
+  border-color: var(--law-accent);
+  color: var(--law-accent);
+  background: var(--law-wash);
+}
+
+.agent-detail-toggle-arrow {
+  font-size: 11px;
+  transition: transform .16s ease;
+}
+
+.agent-detail-toggle-arrow.is-expanded {
+  transform: rotate(90deg);
+}
+
+.agent-draft-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--law-accent) 40%, var(--law-line));
+  border-radius: 8px;
+  background: var(--law-accent);
+  color: var(--law-on-accent);
+  font-size: 12.5px;
+  font-weight: 640;
+  cursor: pointer;
+  transition: background .16s ease, transform .15s ease;
+}
+
+.agent-draft-jump-btn:hover {
+  background: var(--law-accent-strong);
+  transform: translateY(-1px);
+}
+
+.agent-detail-panel {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--law-line);
+}
+
+.agent-formula-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--law-line);
+  border-radius: 9px;
+  background: var(--law-panel);
+}
+
+.agent-formula-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-formula-label {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--law-muted);
+}
+
+.agent-formula-code {
+  display: block;
+  padding: 6px 9px;
+  border: 1px solid var(--law-line);
+  border-radius: 7px;
+  background: var(--law-code-bg);
+  color: var(--law-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.agent-calc-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agent-calc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.agent-calc-badge.is-accent {
+  border-color: color-mix(in srgb, var(--law-accent) 28%, var(--law-line));
+  background: var(--law-wash);
+  color: var(--law-accent);
+}
+
+.agent-calc-badge.is-warning {
+  border-color: var(--law-risk-medium-border);
+  background: var(--law-risk-medium-bg);
+  color: var(--law-risk-medium);
+}
+
+.agent-calc-badge.is-success {
+  border-color: var(--law-risk-low-border);
+  background: var(--law-risk-low-bg);
+  color: var(--law-risk-low);
+}
+
+.agent-calc-badge.is-danger {
+  border-color: var(--law-risk-high-border);
+  background: var(--law-risk-high-bg);
+  color: var(--law-risk-high);
+}
+
+.agent-calc-badge.is-neutral {
+  background: var(--law-card);
+  color: var(--law-muted);
+}
+
+.agent-calc-steps {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--law-ink);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.agent-calc-steps li + li {
+  margin-top: 2px;
+}
+
+.agent-legal-basis {
+  padding-top: 6px;
+  border-top: 1px solid var(--law-line);
+  font-size: 12px;
+  color: var(--law-muted);
+  line-height: 1.5;
+}
+
+.agent-legal-basis-label {
+  font-weight: 650;
+  color: var(--law-accent);
+}
+
+.agent-kv-grid {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--law-line);
+  border-radius: 8px;
+  background: var(--law-code-bg);
+}
+
+.agent-kv-row {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) minmax(0, 1fr);
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.agent-kv-key {
+  color: var(--law-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.agent-kv-val {
+  color: var(--law-ink);
+  overflow-wrap: anywhere;
+}
+
+.is-spinning {
+  animation: agent-spin 1.1s linear infinite;
+}
+
+@keyframes agent-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 消息底部极客性能与 Token 元信息栏 */
+.message-metrics-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 7px;
+  margin-top: 4px;
+  padding: 4px 2px 0;
+  color: var(--law-muted);
+  font-size: 11.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  opacity: .86;
+}
+
+.message-metric-sep {
+  opacity: .55;
+}
+
+@media (max-width: 760px) {
+  .agent-timeline-header {
+    padding: 8px 10px;
+  }
+
+  .agent-timeline-body {
+    padding: 4px 10px 10px;
+  }
+
+  .agent-step-meta-right {
+    margin-left: 0;
+  }
+
+  .agent-kv-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-spinning {
+    animation: none;
+  }
+}
+

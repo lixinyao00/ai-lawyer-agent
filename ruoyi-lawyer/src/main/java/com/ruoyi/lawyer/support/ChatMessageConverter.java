@@ -9,6 +9,7 @@ import com.github.pagehelper.Page;
 import com.ruoyi.lawyer.domain.LawChatMessage;
 import com.ruoyi.lawyer.vo.ChatMessageVO;
 import com.ruoyi.lawyer.vo.CitationVO;
+import com.ruoyi.lawyer.vo.ToolCallTraceVO;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -49,6 +50,14 @@ public final class ChatMessageConverter
         vo.setCreateTime(message.getCreateTime());
         vo.setUpdateTime(message.getUpdateTime());
         vo.setCitations(parseCitations(message.getCitationsJson(), objectMapper));
+        vo.setRewrittenQuery(message.getRewrittenQuery());
+        vo.setRetrievalMode(message.getRetrievalMode());
+        vo.setToolCalls(parseToolCalls(message.getToolCallsJson(), objectMapper));
+        vo.setPromptTokens(message.getPromptTokens());
+        vo.setCompletionTokens(message.getCompletionTokens());
+        vo.setTotalTokens(message.getTotalTokens());
+        vo.setTtftMs(message.getTtftMs());
+        vo.setTotalLatencyMs(message.getTotalLatencyMs());
         return vo;
     }
 
@@ -109,6 +118,31 @@ public final class ChatMessageConverter
         catch (Exception e)
         {
             log.warn("法条引用 JSON 解析失败: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 解析 tool_calls_json，异常或空值返回空列表
+     *
+     * @param json 轨迹 JSON
+     * @param objectMapper Jackson 序列化器
+     * @return 工具调用轨迹
+     */
+    public static List<ToolCallTraceVO> parseToolCalls(String json, ObjectMapper objectMapper)
+    {
+        if (json == null || json.isBlank())
+        {
+            return new ArrayList<>();
+        }
+        try
+        {
+            ToolCallTraceVO[] traces = objectMapper.readValue(json, ToolCallTraceVO[].class);
+            return traces == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(traces));
+        }
+        catch (Exception e)
+        {
+            log.warn("工具调用轨迹 JSON 解析失败: {}", e.getMessage());
             return new ArrayList<>();
         }
     }

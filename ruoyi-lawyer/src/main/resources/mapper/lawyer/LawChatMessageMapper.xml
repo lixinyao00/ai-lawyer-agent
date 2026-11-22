@@ -16,13 +16,20 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="citationsJson" column="citations_json" />
         <result property="rewrittenQuery" column="rewritten_query" />
         <result property="retrievalMode" column="retrieval_mode" />
+        <result property="toolCallsJson" column="tool_calls_json" />
+        <result property="promptTokens" column="prompt_tokens" />
+        <result property="completionTokens" column="completion_tokens" />
+        <result property="totalTokens" column="total_tokens" />
+        <result property="ttftMs" column="ttft_ms" />
+        <result property="totalLatencyMs" column="total_latency_ms" />
         <result property="createTime"   column="create_time"   />
         <result property="updateTime"   column="update_time"   />
     </resultMap>
 
     <sql id="selectMessageVo">
         select id, session_id, request_id, role, content, status, error_code, model_name, citations_json,
-               rewritten_query, retrieval_mode, create_time, update_time
+               rewritten_query, retrieval_mode, tool_calls_json, prompt_tokens, completion_tokens, total_tokens,
+               ttft_ms, total_latency_ms, create_time, update_time
         from law_chat_message
     </sql>
 
@@ -68,10 +75,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <insert id="insertMessage" parameterType="LawChatMessage" useGeneratedKeys="true" keyProperty="id">
         insert into law_chat_message (
             session_id, request_id, role, content, status, error_code, model_name, citations_json,
-            create_time, update_time
+            rewritten_query, retrieval_mode, tool_calls_json, prompt_tokens, completion_tokens, total_tokens,
+            ttft_ms, total_latency_ms, create_time, update_time
         ) values (
             #{sessionId}, #{requestId}, #{role}, #{content}, #{status}, #{errorCode}, #{modelName},
-            #{citationsJson}, #{createTime}, #{updateTime}
+            #{citationsJson}, #{rewrittenQuery}, #{retrievalMode}, #{toolCallsJson}, #{promptTokens},
+            #{completionTokens}, #{totalTokens}, #{ttftMs}, #{totalLatencyMs}, #{createTime}, #{updateTime}
         )
     </insert>
 
@@ -81,8 +90,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             status     = #{status},
             error_code = #{errorCode},
             model_name = #{modelName},
+            citations_json = #{citationsJson},
             rewritten_query = #{rewrittenQuery},
             retrieval_mode = #{retrievalMode},
+            tool_calls_json = #{toolCallsJson},
+            prompt_tokens = #{promptTokens},
+            completion_tokens = #{completionTokens},
+            total_tokens = #{totalTokens},
+            ttft_ms = #{ttftMs},
+            total_latency_ms = #{totalLatencyMs},
             update_time = #{updateTime}
         where id = #{id}
           and status = 'pending'

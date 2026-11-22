@@ -76,6 +76,17 @@ public class DocumentTemplateRegistry
         return templateMap.get(code.trim());
     }
 
+    /**
+     * 按编码查询模板（与 {@link #getByCode(String)} 等价的契约别名）
+     *
+     * @param code 模板编码
+     * @return 模板，不存在返回 null
+     */
+    public DocumentTemplateVO get(String code)
+    {
+        return getByCode(code);
+    }
+
     private List<DocumentTemplateVO> loadTemplates()
     {
         try (InputStream in = Thread.currentThread().getContextClassLoader()

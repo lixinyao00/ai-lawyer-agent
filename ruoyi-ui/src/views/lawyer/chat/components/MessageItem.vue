@@ -7,52 +7,74 @@
       <!-- 用户消息：纯文本展示 -->
       <span v-if="message.role === 'user'" class="chat-text">{{ message.content }}</span>
 
-      <!-- 助手消息：等待中（尚无内容） -->
-      <span v-else-if="message.status === 'pending' && !message.content" class="chat-pending" role="status">
-        {{ message.replayPending ? '回答仍在生成，请稍后刷新' : '正在整理思路' }}
-        <span class="pending-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-      </span>
-
-      <!-- 助手消息：失败状态 + 重试按钮 -->
-      <div v-else-if="message.status === 'failed'" class="chat-failed-box" role="status">
-        <span class="chat-text chat-error-text">{{ message.error || message.errorMessage || '回答生成失败' }}</span>
-        <button
-          v-if="canRetry"
-          type="button"
-          class="retry-button"
-          :disabled="disableRetry"
-          @click="$emit('retry', message)"
-        >
-          <el-icon><RefreshRight /></el-icon>
-          <span>重试</span>
-        </button>
-      </div>
-
-      <!-- 助手消息：Markdown 渲染正文（含流式增量与停止保留的局部内容） -->
+      <!-- 助手消息：统一渲染改写词与 Agent 工具轨迹 -->
       <template v-else>
-        <div class="assistant-content-wrap">
-          <div class="lawyer-markdown" v-html="renderedHtml" />
-          <span v-if="message.streaming" class="stream-cursor" aria-hidden="true" />
+        <AgentToolTimeline
+          :tool-calls="message.toolCalls"
+          :rewritten-query="message.rewrittenQuery"
+          :retrieval-mode="message.retrievalMode"
+        />
+
+        <!-- 等待中（尚无正文内容） -->
+        <span v-if="message.status === 'pending' && !message.content" class="chat-pending" role="status">
+          {{ pendingStatusText }}
+          <span class="pending-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        </span>
+
+        <!-- 失败状态 + 重试按钮 -->
+        <div v-else-if="message.status === 'failed'" class="chat-failed-box" role="status">
+          <span class="chat-text chat-error-text">{{ message.error || message.errorMessage || '回答生成失败' }}</span>
+          <button
+            v-if="canRetry"
+            type="button"
+            class="retry-button"
+            :disabled="disableRetry"
+            @click="$emit('retry', message)"
+          >
+            <el-icon><RefreshRight /></el-icon>
+            <span>重试</span>
+          </button>
         </div>
 
-        <p v-if="message.replayPending" class="message-status-note" role="status">
-          回答仍在生成，请稍后刷新
-        </p>
-        <p v-else-if="message.aborted || message.errorCode === 'aborted'" class="message-status-note">
-          已停止生成（已保留当前内容）
-        </p>
+        <!-- Markdown 渲染正文（含流式增量与停止保留的局部内容） -->
+        <template v-else>
+          <div class="assistant-content-wrap">
+            <div class="lawyer-markdown" v-html="renderedHtml" />
+            <span v-if="message.streaming" class="stream-cursor" aria-hidden="true" />
+          </div>
 
-        <!-- M2 法条引用依据卡片 -->
-        <CitationCards :citations="message.citations" />
+          <p v-if="message.replayPending" class="message-status-note" role="status">
+            回答仍在生成，请稍后刷新
+          </p>
+          <p v-else-if="message.aborted || message.errorCode === 'aborted'" class="message-status-note">
+            已停止生成（已保留当前内容）
+          </p>
+
+          <!-- M2/M5 法条引用依据卡片 -->
+          <CitationCards :citations="message.citations" />
+
+          <!-- M6/M7 轻量极客指标元信息栏 -->
+          <div
+            v-if="message.status === 'success' && metricItems.length > 0"
+            class="message-metrics-bar"
+            aria-label="响应性能与 Token 指标"
+          >
+            <template v-for="(metric, idx) in metricItems" :key="metric">
+              <span v-if="idx > 0" class="message-metric-sep" aria-hidden="true">·</span>
+              <span class="message-metric-item">{{ metric }}</span>
+            </template>
+          </div>
+        </template>
       </template>
     </div>
   </article>
 </template>
 
 <script setup name="MessageItem">
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { RefreshRight } from '@element-plus/icons-vue'
 import LawyerMark from '@/components/LawyerMark.vue'
+import AgentToolTimeline from './AgentToolTimeline.vue'
 import CitationCards from './CitationCards.vue'
 import { renderMarkdown } from '@/utils/lawyer/markdown'
 
@@ -72,6 +94,38 @@ const props = defineProps({
 })
 
 defineEmits(['retry'])
+
+const hasAgentTrace = computed(() => {
+  const hasTools = Array.isArray(props.message.toolCalls) && props.message.toolCalls.length > 0
+  const hasRewrite = typeof props.message.rewrittenQuery === 'string' && props.message.rewrittenQuery.trim().length > 0
+  return hasTools || hasRewrite
+})
+
+const pendingStatusText = computed(() => {
+  if (props.message.replayPending) {
+    return '回答仍在生成，请稍后刷新'
+  }
+  return hasAgentTrace.value ? '正在整合工具结果生成回答...' : '正在整理思路'
+})
+
+const metricItems = computed(() => {
+  const msg = props.message || {}
+  const hasTokens = msg.totalTokens !== null && msg.totalTokens !== undefined
+  const hasTtft = msg.ttftMs !== null && msg.ttftMs !== undefined
+  if (!hasTokens && !hasTtft) return []
+
+  const items = []
+  if (hasTtft) {
+    items.push(`首字 ${msg.ttftMs}ms`)
+  }
+  if (msg.totalLatencyMs !== null && msg.totalLatencyMs !== undefined) {
+    items.push(`总耗时 ${msg.totalLatencyMs}ms`)
+  }
+  if (hasTokens) {
+    items.push(`Tokens ${msg.totalTokens} (输入 ${msg.promptTokens || 0} / 输出 ${msg.completionTokens || 0})`)
+  }
+  return items
+})
 
 const renderedHtml = ref('')
 let throttleTimer = null

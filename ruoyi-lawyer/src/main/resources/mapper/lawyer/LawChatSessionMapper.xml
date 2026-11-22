@@ -12,6 +12,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="updateTime" column="update_time" />
     </resultMap>
 
+    <resultMap type="com.ruoyi.lawyer.vo.AdminSessionVO" id="AdminSessionResult">
+        <result property="id"           column="id"            />
+        <result property="userId"       column="user_id"       />
+        <result property="userName"     column="user_name"     />
+        <result property="nickName"     column="nick_name"     />
+        <result property="title"        column="title"         />
+        <result property="messageCount" column="message_count" />
+        <result property="failedCount"  column="failed_count"  />
+        <result property="createTime"   column="create_time"   />
+        <result property="updateTime"   column="update_time"   />
+    </resultMap>
+
     <sql id="selectSessionVo">
         select id, user_id, title, create_time, update_time from law_chat_session
     </sql>
@@ -31,10 +43,52 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         delete from law_chat_session where id = #{id} and user_id = #{userId}
     </delete>
 
+    <delete id="deleteSessionById">
+        delete from law_chat_session where id = #{id}
+    </delete>
+
     <select id="selectSessionByIdAndUserId" resultMap="LawChatSessionResult">
         <include refid="selectSessionVo"/>
         where id = #{id}
           and user_id = #{userId}
+    </select>
+
+    <select id="selectSessionById" resultMap="LawChatSessionResult">
+        <include refid="selectSessionVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectAdminSessionList" parameterType="com.ruoyi.lawyer.dto.AdminSessionQuery"
+            resultMap="AdminSessionResult">
+        select s.id,
+               s.user_id,
+               u.user_name,
+               u.nick_name,
+               s.title,
+               (select count(*) from law_chat_message m where m.session_id = s.id) as message_count,
+               (select count(*) from law_chat_message m where m.session_id = s.id and m.status = 'failed') as failed_count,
+               s.create_time,
+               s.update_time
+        from law_chat_session s
+        left join sys_user u on u.user_id = s.user_id
+        <where>
+            <if test="userId != null">
+                and s.user_id = #{userId}
+            </if>
+            <if test="userName != null and userName != ''">
+                and u.user_name like concat('%', #{userName}, '%')
+            </if>
+            <if test="title != null and title != ''">
+                and s.title like concat('%', #{title}, '%')
+            </if>
+            <if test="beginTime != null">
+                and s.update_time &gt;= #{beginTime}
+            </if>
+            <if test="endTime != null">
+                and s.update_time &lt; date_add(#{endTime}, interval 1 day)
+            </if>
+        </where>
+        order by s.update_time desc, s.id desc
     </select>
 
     <update id="updateSessionUpdateTime">

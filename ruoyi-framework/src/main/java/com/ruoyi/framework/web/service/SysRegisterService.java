@@ -1,6 +1,7 @@
 package com.ruoyi.framework.web.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.ruoyi.common.constant.CacheConstants;
 import com.ruoyi.common.constant.Constants;
@@ -35,6 +36,12 @@ public class SysRegisterService
 
     @Autowired
     private RedisCache redisCache;
+
+    /**
+     * 注册成功后绑定的默认角色（2 = common 普通咨询用户）
+     */
+    @Value("${lawyer.register.default-role-id:2}")
+    private Long defaultRoleId;
 
     /**
      * 注册
@@ -86,6 +93,8 @@ public class SysRegisterService
             }
             else
             {
+                // 绑定默认角色，注册用户可直接使用前台律师助手功能
+                userService.insertUserAuth(sysUser.getUserId(), new Long[] { defaultRoleId });
                 AsyncManager.me().execute(AsyncFactory.recordLogininfor(username, Constants.REGISTER, MessageUtils.message("user.register.success")));
             }
         }

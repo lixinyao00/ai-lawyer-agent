@@ -78,7 +78,7 @@
           >
             <el-icon><Expand /></el-icon>
           </button>
-          <span class="header-section">智能咨询</span>
+          <WorkspaceNav />
           <template v-if="activeSession && activeSession.title !== DEFAULT_TITLE">
             <span class="header-divider" aria-hidden="true"></span>
             <span class="header-session" :title="activeSession.title">{{ activeSession.title }}</span>
@@ -125,58 +125,60 @@
         </div>
 
         <div v-else class="chat-transcript">
-          <article v-for="message in messages" :key="message.id" class="chat-row" :class="message.role === 'user' ? 'is-user' : 'is-assistant'">
-            <LawyerMark v-if="message.role !== 'user'" class="reply-mark" />
-            <div class="chat-bubble" :class="message.role === 'user' ? 'bubble-user' : 'bubble-assistant'">
-              <span v-if="message.role !== 'user'" class="reply-name">AI 律师助手</span>
-              <span v-if="message.status === 'pending'" class="chat-pending" role="status">正在整理思路<span class="pending-dots" aria-hidden="true"><i></i><i></i><i></i></span></span>
-              <span v-else-if="message.status === 'failed'" class="chat-text chat-error-text" role="status">{{ message.error || '回答生成失败' }}</span>
-              <span v-else class="chat-text">{{ message.content }}</span>
-            </div>
-          </article>
+          <div v-if="activeSession?.hasMoreMessages" class="load-earlier-wrap">
+            <button
+              type="button"
+              class="load-earlier-btn"
+              :disabled="activeSession.loadingEarlier"
+              @click="handleLoadEarlier"
+            >
+              {{ activeSession.loadingEarlier ? '正在加载…' : '加载更早消息' }}
+            </button>
+          </div>
+          <MessageItem
+            v-for="message in messages"
+            :key="message._key || message.id"
+            :message="message"
+            :can-retry="canSendMessages"
+            :disable-retry="streaming"
+            @retry="handleRetry"
+          />
         </div>
       </div>
 
-      <footer v-if="canSendMessages" class="chat-footer">
-        <div class="composer">
-          <el-input
-            ref="composerRef"
-            v-model="draft"
-            type="textarea"
-            :autosize="{ minRows: 1, maxRows: 6 }"
-            resize="none"
-            maxlength="4000"
-            aria-label="输入法律问题"
-            placeholder="输入你的法律问题…"
-            @keydown="handleKeydown"
-          />
-          <div class="composer-actions">
-            <span class="composer-hint">Enter 发送 · Shift + Enter 换行</span>
-            <button type="button" class="send-button" aria-label="发送消息" title="发送消息" :disabled="!canSend" @click="handleSend">
-              <el-icon><Top /></el-icon>
-            </button>
-          </div>
-        </div>
-        <p class="chat-note">AI 生成内容，法律依据请核验</p>
-      </footer>
+      <ChatComposer
+        v-if="canSendMessages"
+        ref="composerRef"
+        v-model="draft"
+        :can-send="canSend"
+        :streaming="streaming"
+        @send="handleSend"
+        @abort="handleAbort"
+      />
     </main>
   </div>
 </template>
 
 <script setup name="LawChat">
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useMediaQuery } from '@vueuse/core'
-import { ArrowDown, ChatLineRound, Delete, Document, Expand, Fold, House, Moon, Plus, Setting, Suitcase, Sunny, Top, TopRight } from '@element-plus/icons-vue'
+import { ArrowDown, ChatLineRound, Delete, Document, Expand, Fold, House, Moon, Plus, Setting, Suitcase, Sunny, TopRight } from '@element-plus/icons-vue'
 import LawyerMark from '@/components/LawyerMark.vue'
+import WorkspaceNav from '@/views/lawyer/components/WorkspaceNav.vue'
+import MessageItem from './components/MessageItem.vue'
+import ChatComposer from './components/ChatComposer.vue'
 import useSettingsStore from '@/store/modules/settings'
 import useUserStore from '@/store/modules/user'
 import useLockStore from '@/store/modules/lock'
 import auth from '@/plugins/auth'
 import { listSession, addSession, delSession } from '@/api/lawyer/session'
-import { listMessage, sendMessage, buildRequestId } from '@/api/lawyer/chat'
+import { listMessage, buildRequestId } from '@/api/lawyer/chat'
+import { useChatStream } from '@/composables/lawyer/useChatStream'
 
 const DEFAULT_TITLE = '新咨询'
+const MESSAGE_PAGE_SIZE = 50
 
 const suggestions = [
   { icon: House, title: '房屋租赁', caption: '押金、退租与维修', prompt: '我在租房时遇到了纠纷，想了解需要先整理哪些信息。' },
@@ -188,11 +190,15 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const settingsStore = useSettingsStore()
+const { streaming, send, abort } = useChatStream()
+
 const isCompact = useMediaQuery('(max-width: 760px)')
 const sidebarOpen = ref(!isCompact.value)
 const accountName = computed(() => userStore.nickName || userStore.name || '我的账号')
 const accountInitial = computed(() => Array.from(accountName.value)[0])
 const managementLink = computed(() => [
+  ['lawyer:manage:list', '/lawyer/session'],
+  ['lawyer:knowledge:list', '/lawyer/knowledge'],
   ['system:user:list', '/system/user'],
   ['system:role:list', '/system/role'],
   ['monitor:online:list', '/monitor/online'],
@@ -200,7 +206,7 @@ const managementLink = computed(() => [
   ['monitor:operlog:list', '/system/log/operlog'],
 ].find(([permission]) => auth.hasPermi(permission))?.[1])
 
-watch(isCompact, compact => { sidebarOpen.value = !compact })
+watch(isCompact, (compact) => { sidebarOpen.value = !compact })
 
 function closeMobileSidebar() {
   if (isCompact.value) sidebarOpen.value = false
@@ -226,7 +232,6 @@ async function handleAccount(command) {
 const sessions = ref([])
 const activeSessionId = ref(null)
 const draft = ref('')
-const sending = ref(false)
 const loading = ref(false)
 const creating = ref(false)
 const deletingId = ref(null)
@@ -244,17 +249,36 @@ const canCreate = computed(() => auth.hasPermi('lawyer:session:add'))
 const canDelete = computed(() => auth.hasPermi('lawyer:session:remove'))
 const canReadMessages = computed(() => auth.hasPermi('lawyer:chat:query'))
 const canSendMessages = computed(() => auth.hasPermi('lawyer:chat:send') && (activeSession.value !== null || canCreate.value))
-const canSend = computed(() => canSendMessages.value && draft.value.trim().length > 0 && !sending.value && !activeSession.value?.messagesLoading)
+const canSend = computed(() => canSendMessages.value && draft.value.trim().length > 0 && !streaming.value && !activeSession.value?.messagesLoading)
 
 let messageSeq = 0
-function nextMessageId() {
+function nextLocalKey() {
   messageSeq += 1
   return `local-${messageSeq}`
 }
 
-// 后端返回的消息统一补上本地渲染需要的状态
 function normalizeMessage(row) {
-  return { ...row, pendingLocal: false, error: row.status === 'failed' ? '回答生成失败' : '' }
+  return {
+    ...row,
+    _key: row.id ? `msg-${row.id}` : nextLocalKey(),
+    streaming: false,
+    aborted: row.errorCode === 'aborted',
+    replayPending: false,
+    citations: Array.isArray(row.citations) ? row.citations : [],
+    error: row.status === 'failed' ? (row.errorMessage || '回答生成失败') : ''
+  }
+}
+
+function normalizeSession(data, existing, messagesLoaded = false) {
+  return {
+    ...data,
+    messages: existing?.messages || [],
+    messagesLoaded: existing?.messagesLoaded ?? messagesLoaded,
+    messagesLoading: false,
+    loadingEarlier: false,
+    pageNum: existing?.pageNum ?? 1,
+    hasMoreMessages: existing?.hasMoreMessages ?? false
+  }
 }
 
 async function loadMessages(sessionId) {
@@ -265,10 +289,13 @@ async function loadMessages(sessionId) {
   }
   session.messagesLoading = true
   try {
-    const res = await listMessage(sessionId, { pageNum: 1, pageSize: 50 })
-    session.messages = (res.rows || []).map(normalizeMessage)
+    const res = await listMessage(sessionId, { pageNum: 1, pageSize: MESSAGE_PAGE_SIZE })
+    const rows = (res.rows || []).map(normalizeMessage)
+    session.messages = rows
+    session.pageNum = 1
+    session.hasMoreMessages = (res.total || 0) > rows.length
     session.messagesLoaded = true
-  } catch (error) {
+  } catch {
     // 错误提示由 request 拦截器处理。
   } finally {
     session.messagesLoading = false
@@ -276,16 +303,41 @@ async function loadMessages(sessionId) {
   scrollToBottom()
 }
 
-// 切换会话时从后端读取该会话的历史消息
+async function handleLoadEarlier() {
+  const session = activeSession.value
+  if (!session || session.loadingEarlier || !session.hasMoreMessages) {
+    return
+  }
+  session.loadingEarlier = true
+  const nextPage = (session.pageNum || 1) + 1
+  const container = messageListRef.value
+  const prevScrollHeight = container ? container.scrollHeight : 0
+  try {
+    const res = await listMessage(session.id, { pageNum: nextPage, pageSize: MESSAGE_PAGE_SIZE })
+    const incoming = (res.rows || []).map(normalizeMessage)
+    const existingIds = new Set(session.messages.map((item) => item.id).filter(Boolean))
+    const older = incoming.filter((item) => !item.id || !existingIds.has(item.id))
+    if (older.length) {
+      session.messages = [...older, ...session.messages]
+      session.pageNum = nextPage
+    }
+    session.hasMoreMessages = incoming.length >= MESSAGE_PAGE_SIZE && session.messages.length < (res.total || 0)
+    await nextTick()
+    if (container) {
+      container.scrollTop += container.scrollHeight - prevScrollHeight
+    }
+  } catch {
+    // 错误提示由 request 拦截器处理。
+  } finally {
+    session.loadingEarlier = false
+  }
+}
+
 watch(activeSessionId, (id) => {
   if (id !== null) {
     loadMessages(id)
   }
 })
-
-function normalizeSession(data, existing, messagesLoaded = false) {
-  return { ...data, messages: existing?.messages || [], messagesLoaded: existing?.messagesLoaded ?? messagesLoaded, messagesLoading: false }
-}
 
 async function loadSessions() {
   loading.value = true
@@ -299,7 +351,7 @@ async function loadSessions() {
     if (!sessions.value.some((item) => item.id === activeSessionId.value)) {
       activeSessionId.value = sessions.value.length > 0 ? sessions.value[0].id : null
     }
-  } catch (error) {
+  } catch {
     // 列表加载失败时保持空列表，错误提示由 request 拦截器统一处理
   } finally {
     loading.value = false
@@ -307,6 +359,12 @@ async function loadSessions() {
 }
 
 onMounted(loadSessions)
+
+onBeforeUnmount(() => {
+  if (streaming.value) {
+    abort()
+  }
+})
 
 async function handleCreateSession() {
   if (!canCreate.value || creating.value) {
@@ -318,14 +376,17 @@ async function handleCreateSession() {
     sessions.value.unshift(normalizeSession(res.data, undefined, true))
     handleSelectSession(res.data.id)
     nextTick(() => composerRef.value?.focus())
-  } catch (error) {
-    // 新建失败时不改动列表，错误提示由 request 拦截器统一处理
+  } catch {
+    // 新建失败时不改动列表
   } finally {
     creating.value = false
   }
 }
 
 function handleSelectSession(id) {
+  if (streaming.value) {
+    abort()
+  }
   activeSessionId.value = id
   closeMobileSidebar()
   scrollToBottom()
@@ -342,8 +403,7 @@ async function handleDeleteSession(session) {
       cancelButtonText: '取消',
       type: 'warning'
     })
-  } catch (error) {
-    // 用户取消，不做任何处理
+  } catch {
     return
   }
 
@@ -354,12 +414,11 @@ async function handleDeleteSession(session) {
     if (index > -1) {
       sessions.value.splice(index, 1)
     }
-    // 删除的是当前会话时，自动切到列表第一个
     if (activeSessionId.value === session.id) {
       activeSessionId.value = sessions.value.length > 0 ? sessions.value[0].id : null
     }
-  } catch (error) {
-    // 删除失败时保留列表，错误提示由 request 拦截器统一处理
+  } catch {
+    // 删除失败时保留列表
   } finally {
     deletingId.value = null
   }
@@ -379,84 +438,189 @@ function scrollToBottom() {
   })
 }
 
+function isBusyError(error) {
+  const code = error?.code ?? error?.response?.data?.code
+  const msg = String(error?.msg || error?.message || '')
+  return Number(code) === 409 || msg.includes('409') || msg.includes('正在生成')
+}
+
+async function executeStream(session, content, targetReply, targetUserMessage = null) {
+  const requestId = buildRequestId()
+  targetReply.status = 'pending'
+  targetReply.content = ''
+  targetReply.error = ''
+  targetReply.aborted = false
+  targetReply.replayPending = false
+  targetReply.streaming = true
+  targetReply.promptText = content
+
+  try {
+    const result = await send({
+      sessionId: session.id,
+      content,
+      requestId,
+      onMeta(meta) {
+        if (targetUserMessage && meta?.userMessageId) {
+          targetUserMessage.id = meta.userMessageId
+        }
+        if (meta?.assistantMessageId) {
+          targetReply.id = meta.assistantMessageId
+        }
+        if (meta?.sessionTitle && session.title === DEFAULT_TITLE) {
+          session.title = meta.sessionTitle
+        }
+      },
+      onCitation(citations) {
+        targetReply.citations = Array.isArray(citations) ? citations : []
+      },
+      onDelta(_chunk, fullText) {
+        if (fullText !== undefined && fullText !== null) {
+          targetReply.content = fullText
+        }
+        scrollToBottom()
+      },
+      onDone(done) {
+        if (done?.status === 'pending') {
+          targetReply.status = 'pending'
+          targetReply.replayPending = true
+          ElMessage.info('回答仍在生成，请稍后刷新')
+          return
+        }
+        targetReply.status = done?.status || 'success'
+        if (done?.content !== undefined && done?.content !== null) {
+          targetReply.content = done.content
+        }
+        if (Array.isArray(done?.citations)) {
+          targetReply.citations = done.citations
+        }
+      },
+      onError(err) {
+        targetReply.status = 'failed'
+        targetReply.error = err?.message || '回答生成失败'
+      }
+    })
+
+    targetReply.streaming = false
+    if (result?.status === 'aborted') {
+      if (result.content) {
+        targetReply.content = result.content
+      }
+      if (targetReply.content) {
+        targetReply.status = 'success'
+        targetReply.aborted = true
+        targetReply.errorCode = 'aborted'
+      } else {
+        targetReply.status = 'failed'
+        targetReply.error = '已停止生成'
+      }
+    } else if (result?.status === 'pending') {
+      targetReply.status = 'pending'
+      targetReply.replayPending = true
+    } else if (result?.status === 'failed') {
+      targetReply.status = 'failed'
+      targetReply.error = result.errorMessage || targetReply.error || '回答生成失败'
+    } else if (result) {
+      targetReply.status = 'success'
+      if (result.content) {
+        targetReply.content = result.content
+      }
+      if (Array.isArray(result.citations)) {
+        targetReply.citations = result.citations
+      }
+    }
+
+    if (targetReply.status === 'success' && session.title === DEFAULT_TITLE) {
+      session.title = buildTitle(content)
+    }
+    scrollToBottom()
+  } catch (error) {
+    targetReply.streaming = false
+    if (isBusyError(error)) {
+      ElMessage.warning('当前会话正在生成回答，请稍后再试')
+      targetReply.status = 'failed'
+      targetReply.error = '当前会话正在生成回答，请稍后再试'
+    } else {
+      targetReply.status = 'failed'
+      targetReply.error = error?.msg || error?.message || '发送失败，请稍后重试'
+    }
+  }
+}
+
 async function handleSend() {
   const content = draft.value.trim()
   if (!canSend.value) {
     return
   }
-  sending.value = true
 
-  try {
-    // 还没有会话时直接提问，先建一个会话，标题用问题前 20 字
-    let session = activeSession.value
-    if (!session) {
+  let session = activeSession.value
+  if (!session) {
+    try {
       const res = await addSession({ title: buildTitle(content) })
       sessions.value.unshift(normalizeSession(res.data, undefined, true))
       activeSessionId.value = res.data.id
       session = sessions.value[0]
-    }
-
-    // 本地立即显示自己的消息和等待中的占位
-    const localUserMessage = { id: nextMessageId(), role: 'user', content, status: 'success', pendingLocal: true }
-    const localReply = { id: nextMessageId(), role: 'assistant', content: '', status: 'pending', pendingLocal: true }
-    session.messages.push(localUserMessage, localReply)
-    draft.value = ''
-    scrollToBottom()
-
-    // 发送请求，requestId 是幂等键，重试时重新生成
-    const requestId = buildRequestId()
-    let data
-    try {
-      const res = await sendMessage(session.id, { content, requestId })
-      data = res.data
-    } catch (error) {
-      // 接口失败：本地占位转为失败状态，提示后端返回的信息（拦截器已弹过提示）
-      const failedReply = session.messages.find(message => message.id === localReply.id)
-      if (failedReply) {
-        failedReply.status = 'failed'
-        failedReply.error = '发送失败，请稍后重试'
-      }
-      sending.value = false
+    } catch {
       return
     }
-
-    // 用后端真实数据替换本地占位
-    const userIndex = session.messages.indexOf(localUserMessage)
-    if (userIndex > -1) {
-      session.messages.splice(userIndex, 2, {
-        id: data.userMessageId,
-        role: 'user',
-        content,
-        status: 'success',
-        pendingLocal: false,
-        error: ''
-      }, {
-        id: data.assistantMessageId,
-        role: 'assistant',
-        content: data.content || '',
-        status: data.status,
-        pendingLocal: false,
-        error: data.errorMessage || (data.status === 'failed' ? '回答生成失败' : '')
-      })
-    }
-    // 后端可能更新了会话标题（首条消息自动命名）
-    if (data.status === 'success' && session.title === DEFAULT_TITLE) {
-      session.title = buildTitle(content)
-    }
-    sending.value = false
-    scrollToBottom()
-  } catch (error) {
-    sending.value = false
   }
+
+  const localUserMessage = {
+    id: nextLocalKey(),
+    _key: nextLocalKey(),
+    role: 'user',
+    content,
+    status: 'success',
+    citations: []
+  }
+  const localReply = {
+    id: nextLocalKey(),
+    _key: nextLocalKey(),
+    role: 'assistant',
+    content: '',
+    status: 'pending',
+    streaming: true,
+    aborted: false,
+    replayPending: false,
+    citations: [],
+    promptText: content,
+    error: ''
+  }
+
+  session.messages.push(localUserMessage, localReply)
+  draft.value = ''
+  scrollToBottom()
+
+  await executeStream(session, content, localReply, localUserMessage)
 }
 
-function handleKeydown(event) {
-  // 中文输入法选字时按 Enter 不发送
-  if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
+function handleAbort() {
+  abort()
+}
+
+function findPromptForMessage(session, targetMessage) {
+  if (targetMessage.promptText) {
+    return targetMessage.promptText
+  }
+  const idx = session.messages.indexOf(targetMessage)
+  for (let i = idx - 1; i >= 0; i -= 1) {
+    if (session.messages[i].role === 'user' && session.messages[i].content) {
+      return session.messages[i].content
+    }
+  }
+  return ''
+}
+
+async function handleRetry(failedMessage) {
+  const session = activeSession.value
+  if (!session || streaming.value) {
     return
   }
-  event.preventDefault()
-  handleSend()
+  const promptText = findPromptForMessage(session, failedMessage)
+  if (!promptText) {
+    ElMessage.warning('未找到对应的提问内容，请重新输入问题')
+    return
+  }
+  await executeStream(session, promptText, failedMessage)
 }
 </script>
 
@@ -738,12 +902,6 @@ function handleKeydown(event) {
   gap: 13px;
 }
 
-.header-section {
-  flex: none;
-  font-size: 15px;
-  font-weight: 680;
-}
-
 .header-divider {
   width: 1px;
   height: 14px;
@@ -772,6 +930,7 @@ function handleKeydown(event) {
   color: var(--law-ink);
   white-space: nowrap;
   font-size: 13px;
+  text-decoration: none;
 }
 
 .management-link:hover {
@@ -901,164 +1060,6 @@ function handleKeydown(event) {
   padding: 35px 24px 17px;
 }
 
-.chat-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  margin-bottom: 24px;
-}
-
-.is-user {
-  justify-content: flex-end;
-}
-
-.reply-mark {
-  margin-top: 2px;
-  --mark-size: 28px;
-}
-
-.chat-bubble {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-  line-height: 1.78;
-}
-
-.bubble-user {
-  max-width: min(82%, 620px);
-  padding: 10px 16px;
-  border-radius: 19px 19px 6px 19px;
-  background: var(--law-wash);
-}
-
-.bubble-assistant {
-  flex: 1;
-  padding-top: 1px;
-}
-
-.reply-name {
-  color: var(--law-ink);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.chat-text {
-  font-size: 15px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.chat-pending,
-.chat-error-text {
-  color: var(--law-muted);
-}
-
-.chat-error-text {
-  color: var(--el-color-danger);
-}
-
-.pending-dots {
-  display: inline-flex;
-  gap: 3px;
-  margin-left: 7px;
-  vertical-align: middle;
-}
-
-.pending-dots i {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: pulse 1.2s infinite alternate;
-}
-
-.pending-dots i:nth-child(2) { animation-delay: .15s; }
-.pending-dots i:nth-child(3) { animation-delay: .3s; }
-
-@keyframes pulse {
-  from { opacity: .2; }
-  to { opacity: .85; }
-}
-
-.chat-footer {
-  flex: none;
-  width: min(100%, 812px);
-  margin: 0 auto;
-  padding: 8px 24px max(13px, env(safe-area-inset-bottom));
-}
-
-.composer {
-  padding: 12px 12px 10px;
-  border: 1px solid var(--law-line);
-  border-radius: 21px;
-  background: var(--law-card);
-  box-shadow: var(--law-shadow);
-}
-
-.composer:focus-within {
-  border-color: color-mix(in srgb, var(--law-accent) 48%, var(--law-line));
-}
-
-.composer :deep(.el-textarea__inner) {
-  padding: 2px 3px 4px;
-  border: 0;
-  box-shadow: none;
-  background: transparent;
-  color: var(--law-ink);
-  font: inherit;
-  font-size: 16px;
-  line-height: 1.55;
-}
-
-.composer :deep(.el-textarea__inner::placeholder) {
-  color: var(--law-muted);
-}
-
-.composer-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 7px;
-  min-height: 34px;
-  padding: 1px 0 0 3px;
-}
-
-.composer-hint,
-.chat-note {
-  color: var(--law-muted);
-  font-size: 12px;
-}
-
-.send-button {
-  display: grid;
-  flex: 0 0 36px;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 0;
-  border-radius: 12px;
-  background: var(--law-accent);
-  color: var(--law-on-accent);
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.send-button:hover:not(:disabled) {
-  background: var(--law-accent-strong);
-}
-
-.send-button:disabled {
-  background: var(--law-hover);
-  color: var(--law-muted);
-  cursor: default;
-}
-
-.chat-note {
-  margin: 10px 0 0;
-  text-align: center;
-}
-
 .chat-backdrop {
   display: none;
 }
@@ -1074,6 +1075,11 @@ function handleKeydown(event) {
   }
 
   .suggestion-arrow {
+    display: none;
+  }
+
+  .header-divider,
+  .header-session {
     display: none;
   }
 }
@@ -1153,26 +1159,13 @@ function handleKeydown(event) {
     font-size: 13px;
   }
 
-  .suggestion-text span,
-  .composer-hint {
+  .suggestion-text span {
     display: none;
   }
 
-  .composer-actions {
-    justify-content: flex-end;
-  }
-
-  .chat-transcript,
-  .chat-footer {
-    padding-inline: 14px;
-  }
-
   .chat-transcript {
+    padding-inline: 14px;
     padding-top: 24px;
-  }
-
-  .chat-row {
-    margin-bottom: 18px;
   }
 }
 
@@ -1188,6 +1181,5 @@ function handleKeydown(event) {
 
 @media (prefers-reduced-motion: reduce) {
   .suggestion { transition: none; }
-  .pending-dots i { animation: none; }
 }
 </style>

@@ -27,6 +27,12 @@ public class LawyerAiProperties
     /** 一次模型请求的总超时（毫秒） */
     private Long requestTimeout = 60000L;
 
+    /** 流式问答总时长上限（毫秒），必须小于会话锁 TTL */
+    private Long streamTimeout = 100000L;
+
+    /** 合同审查 / 文书生成等长任务超时（毫秒） */
+    private Long longRequestTimeout = 120000L;
+
     public String getBaseUrl()
     {
         return baseUrl;
@@ -75,6 +81,26 @@ public class LawyerAiProperties
     public void setRequestTimeout(Long requestTimeout)
     {
         this.requestTimeout = requestTimeout;
+    }
+
+    public Long getStreamTimeout()
+    {
+        return streamTimeout;
+    }
+
+    public void setStreamTimeout(Long streamTimeout)
+    {
+        this.streamTimeout = streamTimeout;
+    }
+
+    public Long getLongRequestTimeout()
+    {
+        return longRequestTimeout;
+    }
+
+    public void setLongRequestTimeout(Long longRequestTimeout)
+    {
+        this.longRequestTimeout = longRequestTimeout;
     }
 
     /**

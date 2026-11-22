@@ -10,6 +10,7 @@
   --law-wash: #e6eee2;
   --law-hover: #e8ebe3;
   --law-on-accent: #fff;
+  --law-code-bg: #f4f5f0;
   --law-shadow: 0 2px 5px #24372707, 0 12px 28px #2437270a;
   color: var(--law-ink);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -27,5 +28,359 @@ html.dark .lawyer-surface {
   --law-wash: #303f33;
   --law-hover: #303a31;
   --law-on-accent: #203126;
+  --law-code-bg: #1b211c;
   --law-shadow: 0 8px 28px #0003;
+}
+
+/* 工作台顶部功能导航 */
+.workspace-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-panel);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.workspace-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.workspace-nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: 9px;
+  color: var(--law-muted);
+  font-size: 13px;
+  font-weight: 560;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background .16s ease, color .16s ease;
+}
+
+.workspace-nav-item:hover {
+  color: var(--law-ink);
+  background: var(--law-hover);
+}
+
+.workspace-nav-item.is-active {
+  background: var(--law-card);
+  color: var(--law-accent);
+  font-weight: 650;
+  box-shadow: 0 1px 2px #20272010;
+}
+
+.workspace-nav-item:focus-visible {
+  outline: 2px solid var(--law-accent);
+  outline-offset: 2px;
+}
+
+/* Markdown 正文排版 */
+.lawyer-markdown {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--law-ink);
+  overflow-wrap: anywhere;
+}
+
+.lawyer-markdown > :first-child {
+  margin-top: 0;
+}
+
+.lawyer-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.lawyer-markdown h1,
+.lawyer-markdown h2,
+.lawyer-markdown h3,
+.lawyer-markdown h4 {
+  margin: 1.1em 0 .45em;
+  font-weight: 680;
+  line-height: 1.35;
+  color: var(--law-ink);
+}
+
+.lawyer-markdown h1 { font-size: 1.3em; }
+.lawyer-markdown h2 { font-size: 1.18em; }
+.lawyer-markdown h3 { font-size: 1.08em; }
+.lawyer-markdown h4 { font-size: 1em; }
+
+.lawyer-markdown p {
+  margin: .55em 0;
+}
+
+.lawyer-markdown ul,
+.lawyer-markdown ol {
+  margin: .55em 0;
+  padding-left: 1.45em;
+}
+
+.lawyer-markdown li {
+  margin: .25em 0;
+}
+
+.lawyer-markdown li > p {
+  margin: .2em 0;
+}
+
+.lawyer-markdown blockquote {
+  margin: .75em 0;
+  padding: .45em .9em;
+  border-left: 3px solid var(--law-accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--law-panel);
+  color: var(--law-muted);
+}
+
+.lawyer-markdown code {
+  padding: .15em .4em;
+  border-radius: 5px;
+  background: var(--law-code-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: .88em;
+}
+
+.lawyer-markdown pre {
+  margin: .75em 0;
+  padding: 12px 14px;
+  border: 1px solid var(--law-line);
+  border-radius: 10px;
+  background: var(--law-code-bg);
+  overflow-x: auto;
+  line-height: 1.55;
+}
+
+.lawyer-markdown pre code {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+}
+
+.lawyer-markdown table {
+  width: 100%;
+  margin: .75em 0;
+  border-collapse: collapse;
+  border: 1px solid var(--law-line);
+  font-size: 14px;
+  display: block;
+  overflow-x: auto;
+}
+
+.lawyer-markdown th,
+.lawyer-markdown td {
+  padding: 7px 11px;
+  border: 1px solid var(--law-line);
+  text-align: left;
+}
+
+.lawyer-markdown th {
+  background: var(--law-panel);
+  font-weight: 650;
+}
+
+.lawyer-markdown a {
+  color: var(--law-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lawyer-markdown hr {
+  margin: 1em 0;
+  border: 0;
+  border-top: 1px solid var(--law-line);
+}
+
+/* 流式输出光标 */
+.stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 3px;
+  vertical-align: -0.15em;
+  border-radius: 1px;
+  background: var(--law-accent);
+  animation: lawyer-cursor-blink 1s steps(2, start) infinite;
+}
+
+@keyframes lawyer-cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* 停止生成按钮 */
+.stop-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-panel);
+  color: var(--law-ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+
+.stop-button:hover {
+  border-color: var(--el-color-danger);
+  color: var(--el-color-danger);
+  background: var(--law-card);
+}
+
+.stop-button:focus-visible {
+  outline: 2px solid var(--law-accent);
+  outline-offset: 2px;
+}
+
+/* 加载更早消息按钮 */
+.load-earlier-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.load-earlier-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--law-line);
+  border-radius: 999px;
+  background: var(--law-card);
+  color: var(--law-muted);
+  font-size: 12px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+
+.load-earlier-btn:hover:not(:disabled) {
+  border-color: var(--law-accent);
+  color: var(--law-accent);
+  background: var(--law-wash);
+}
+
+.load-earlier-btn:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+/* 占位工作台通用布局（M3/M4 占位页复用） */
+.workspace-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--law-bg);
+}
+
+.workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 69px;
+  padding: 10px 28px;
+  border-bottom: 1px solid var(--law-line);
+  background: var(--law-bg);
+}
+
+.workspace-header-start,
+.workspace-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.workspace-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--law-ink);
+  font-size: 15px;
+  font-weight: 690;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.workspace-placeholder-body {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: 32px 20px;
+}
+
+.workspace-placeholder-card {
+  width: min(100%, 540px);
+  padding: 36px 32px;
+  border: 1px solid var(--law-line);
+  border-radius: 22px;
+  background: var(--law-card);
+  box-shadow: var(--law-shadow);
+  text-align: center;
+}
+
+.workspace-placeholder-icon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  margin: 0 auto 18px;
+  border: 1px solid color-mix(in srgb, var(--law-accent) 18%, var(--law-line));
+  border-radius: 18px;
+  background: var(--law-wash);
+  color: var(--law-accent);
+  font-size: 28px;
+}
+
+.workspace-placeholder-card h1 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 680;
+  color: var(--law-ink);
+}
+
+.workspace-placeholder-card p {
+  margin: 0 0 22px;
+  color: var(--law-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+@media (max-width: 760px) {
+  .workspace-header {
+    min-height: 56px;
+    padding: 8px 14px;
+    gap: 8px;
+  }
+
+  .workspace-brand-link span:last-child {
+    display: none;
+  }
+
+  .workspace-nav-item {
+    padding: 0 9px;
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stream-cursor {
+    animation: none;
+  }
 }

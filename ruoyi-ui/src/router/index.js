@@ -67,6 +67,18 @@ export const constantRoutes = [
         component: () => import('@/views/lawyer/chat/index'),
         name: 'Index',
         meta: { title: '首页', icon: 'dashboard', affix: true, permission: 'lawyer:session:list', consultationWorkspace: true }
+      },
+      {
+        path: '/lawyer-workspace/contract',
+        component: () => import('@/views/lawyer/contract/index'),
+        name: 'WorkspaceContract',
+        meta: { title: '合同风险审查', permission: 'lawyer:contract:list', consultationWorkspace: true }
+      },
+      {
+        path: '/lawyer-workspace/document',
+        component: () => import('@/views/lawyer/document/index'),
+        name: 'WorkspaceDocument',
+        meta: { title: '法律文书起草', permission: 'lawyer:document:list', consultationWorkspace: true }
       }
     ]
   },

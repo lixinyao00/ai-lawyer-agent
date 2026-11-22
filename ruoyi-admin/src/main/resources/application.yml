@@ -6,8 +6,8 @@ ruoyi:
   version: 3.9.2
   # 版权年份
   copyrightYear: 2026
-  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: D:/ruoyi/uploadPath
+  # 文件路径：默认使用项目目录下的 data/uploadPath（可通过环境变量覆盖）
+  profile: ${RUOYI_PROFILE:./data/uploadPath}
   # 获取ip地址开关
   addressEnabled: false
   # 验证码类型 math 数字计算 char 字符验证
@@ -119,6 +119,9 @@ pagehelper:
 # 律师AI模型配置
 # 全部通过环境变量注入，切换任意 OpenAI 兼容服务商无需改代码
 lawyer:
+  register:
+    # 注册成功后绑定的默认角色（2 = common 普通咨询用户）
+    default-role-id: 2
   ai:
     # 模型服务基础地址（OpenAI兼容协议），需带版本段，例如 https://your-host/v1
     base-url: ${LAWYER_AI_BASE_URL:https://api.openai.com/v1}
@@ -130,6 +133,39 @@ lawyer:
     connect-timeout: ${LAWYER_AI_CONNECT_TIMEOUT:5000}
     # 单次模型请求总超时（毫秒）
     request-timeout: ${LAWYER_AI_REQUEST_TIMEOUT:60000}
+    # 流式总时长上限（毫秒，必须小于会话锁 TTL）
+    stream-timeout: ${LAWYER_AI_STREAM_TIMEOUT:100000}
+    # 合同审查 / 文书生成等长任务超时（毫秒）
+    long-request-timeout: ${LAWYER_AI_LONG_REQUEST_TIMEOUT:120000}
+  chat:
+    # Redis 会话锁 TTL（秒）
+    lock-ttl-seconds: 120
+    # 遗留 pending 消息收敛阈值（秒）
+    pending-timeout-seconds: 120
+    # 带入模型的历史轮数（一轮 = 一问一答）
+    history-rounds: 10
+    # 历史上下文最大字符预算
+    history-max-chars: 12000
+    # SseEmitter 超时（毫秒）
+    sse-timeout: 110000
+    # SSE 心跳间隔（秒）
+    heartbeat-seconds: 15
+  knowledge:
+    enabled: true
+    top-k: 4
+    min-score: 1.0
+    snippet-max-chars: 200
+    prompt-max-chars: 4000
+    refresh-minutes: 10
+    seed-enabled: true
+  storage:
+    root: ${LAWYER_STORAGE_ROOT:./data/lawyer-files}
+    allowed-ext: docx,pdf,txt,md
+    max-size-mb: 10
+  contract:
+    # 送模型的合同最大字数，超出截断并在 summary 注明
+    max-chars: 20000
+    pending-timeout-seconds: 300
 
 # 接口文档仅在 dev 环境启用
 springdoc:

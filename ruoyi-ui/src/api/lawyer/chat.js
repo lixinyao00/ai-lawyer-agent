@@ -23,3 +23,6 @@ export function sendMessage(sessionId, data) {
 export function buildRequestId() {
   return crypto.randomUUID()
 }
+
+// 流式发送消息 SSE 接口路径
+export const STREAM_URL = (sessionId) => '/lawyer/sessions/' + sessionId + '/messages/stream'

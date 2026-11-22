@@ -1,5 +1,8 @@
 package com.ruoyi.lawyer.vo;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 发送消息返回结果
  *
@@ -24,6 +27,12 @@ public class ChatReplyVO
 
     /** 面向用户的错误提示，成功时为空 */
     private String errorMessage;
+
+    /** 应用定义的错误代码 */
+    private String errorCode;
+
+    /** 法条引用，空为 []，不输出 null */
+    private List<CitationVO> citations = new ArrayList<>();
 
     public String getRequestId()
     {
@@ -83,5 +92,25 @@ public class ChatReplyVO
     public void setErrorMessage(String errorMessage)
     {
         this.errorMessage = errorMessage;
+    }
+
+    public String getErrorCode()
+    {
+        return errorCode;
+    }
+
+    public void setErrorCode(String errorCode)
+    {
+        this.errorCode = errorCode;
+    }
+
+    public List<CitationVO> getCitations()
+    {
+        return citations;
+    }
+
+    public void setCitations(List<CitationVO> citations)
+    {
+        this.citations = citations == null ? new ArrayList<>() : citations;
     }
 }

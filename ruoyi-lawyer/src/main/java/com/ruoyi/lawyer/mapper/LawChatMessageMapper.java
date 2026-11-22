@@ -1,5 +1,6 @@
 package com.ruoyi.lawyer.mapper;
 
+import java.util.Date;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import com.ruoyi.lawyer.domain.LawChatMessage;
@@ -30,7 +31,7 @@ public interface LawChatMessageMapper
             @Param("requestId") String requestId);
 
     /**
-     * 更新助手消息的正文、状态和错误信息
+     * 更新助手消息的正文、状态和错误信息（仅当仍为 pending 时生效）
      *
      * @param message 消息信息
      * @return 影响行数
@@ -46,6 +47,14 @@ public interface LawChatMessageMapper
     List<LawChatMessage> selectMessagesBySessionId(@Param("sessionId") Long sessionId);
 
     /**
+     * 查询会话消息，按消息ID正序返回（后台审计）
+     *
+     * @param sessionId 会话ID
+     * @return 消息集合
+     */
+    List<LawChatMessage> selectMessagesBySessionIdAsc(@Param("sessionId") Long sessionId);
+
+    /**
      * 读取最近 limit 轮 status=success 的问答，按时间正序返回（user 与 assistant 成对）
      *
      * @param sessionId 会话ID
@@ -53,6 +62,17 @@ public interface LawChatMessageMapper
      * @return 消息集合
      */
     List<LawChatMessage> selectRecentSuccessMessages(@Param("sessionId") Long sessionId, @Param("limit") int limit);
+
+    /**
+     * 收敛遗留 pending 的助手消息为 failed/timeout_recovered
+     *
+     * @param sessionId 会话ID
+     * @param deadline 早于该创建时间的 pending 视为遗留
+     * @param now 当前时间
+     * @return 影响行数
+     */
+    int failStalePending(@Param("sessionId") Long sessionId, @Param("deadline") Date deadline,
+            @Param("now") Date now);
 
     /**
      * 删除会话下的全部消息

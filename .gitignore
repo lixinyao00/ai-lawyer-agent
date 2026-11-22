@@ -55,3 +55,6 @@ dump.rdb
 node_modules/
 ruoyi-ui/node_modules/
 ruoyi-ui/dist/
+
+# 运行期数据目录（上传文件、私有文件等）
+data/

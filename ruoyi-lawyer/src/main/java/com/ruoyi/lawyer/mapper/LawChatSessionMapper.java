@@ -4,6 +4,8 @@ import java.util.Date;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import com.ruoyi.lawyer.domain.LawChatSession;
+import com.ruoyi.lawyer.dto.AdminSessionQuery;
+import com.ruoyi.lawyer.vo.AdminSessionVO;
 
 /**
  * 咨询会话 数据层
@@ -38,6 +40,22 @@ public interface LawChatSessionMapper
     LawChatSession selectSessionByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
 
     /**
+     * 按会话ID查询会话（后台审计）
+     *
+     * @param id 会话ID
+     * @return 会话信息
+     */
+    LawChatSession selectSessionById(@Param("id") Long id);
+
+    /**
+     * 后台会话审计分页查询
+     *
+     * @param query 查询条件
+     * @return 会话视图集合
+     */
+    List<AdminSessionVO> selectAdminSessionList(AdminSessionQuery query);
+
+    /**
      * 更新会话的最近更新时间
      *
      * @param id 会话ID
@@ -64,4 +82,12 @@ public interface LawChatSessionMapper
      * @return 影响行数
      */
     int deleteSessionByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
+
+    /**
+     * 按会话ID删除会话（后台删除，调用方已校验存在性）
+     *
+     * @param id 会话ID
+     * @return 影响行数
+     */
+    int deleteSessionById(@Param("id") Long id);
 }

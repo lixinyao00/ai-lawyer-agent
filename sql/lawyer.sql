@@ -1,8 +1,7 @@
 -- ----------------------------
 -- 咨询会话表：保存“谁发起了哪一次咨询”
 -- ----------------------------
-DROP TABLE IF EXISTS `law_chat_session`;
-CREATE TABLE `law_chat_session` (
+CREATE TABLE IF NOT EXISTS `law_chat_session` (
   `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
   `user_id`     BIGINT       NOT NULL COMMENT '所属用户ID',
   `title`       VARCHAR(100) NOT NULL DEFAULT '新咨询' COMMENT '咨询标题',

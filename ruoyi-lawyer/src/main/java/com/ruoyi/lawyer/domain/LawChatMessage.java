@@ -1,5 +1,6 @@
 package com.ruoyi.lawyer.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.ruoyi.common.core.domain.BaseEntity;
 
 /**
@@ -34,6 +35,10 @@ public class LawChatMessage extends BaseEntity
 
     /** 实际使用的模型名 */
     private String modelName;
+
+    /** 法条引用 JSON 数组（仅 assistant 消息写入），对外只暴露解析后的 citations */
+    @JsonIgnore
+    private String citationsJson;
 
     public Long getId()
     {
@@ -113,5 +118,15 @@ public class LawChatMessage extends BaseEntity
     public void setModelName(String modelName)
     {
         this.modelName = modelName;
+    }
+
+    public String getCitationsJson()
+    {
+        return citationsJson;
+    }
+
+    public void setCitationsJson(String citationsJson)
+    {
+        this.citationsJson = citationsJson;
     }
 }

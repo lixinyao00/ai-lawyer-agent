@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.lawyer.mapper.LawKnowledgeChunkMapper">
+
+    <resultMap type="LawKnowledgeChunk" id="LawKnowledgeChunkResult">
+        <result property="id"         column="id"          />
+        <result property="docId"      column="doc_id"      />
+        <result property="articleNo"  column="article_no"  />
+        <result property="content"    column="content"     />
+        <result property="keywords"   column="keywords"    />
+        <result property="tokenCount" column="token_count" />
+        <result property="createTime" column="create_time" />
+        <result property="docTitle"   column="doc_title"   />
+    </resultMap>
+
+    <sql id="selectChunkVo">
+        select id, doc_id, article_no, content, keywords, token_count, create_time
+        from law_knowledge_chunk
+    </sql>
+
+    <insert id="batchInsertChunks">
+        insert into law_knowledge_chunk (doc_id, article_no, content, keywords, token_count, create_time)
+        values
+        <foreach collection="chunks" item="chunk" separator=",">
+            (#{chunk.docId}, #{chunk.articleNo}, #{chunk.content}, #{chunk.keywords},
+             #{chunk.tokenCount}, #{chunk.createTime})
+        </foreach>
+    </insert>
+
+    <select id="selectChunksByDocId" resultMap="LawKnowledgeChunkResult">
+        <include refid="selectChunkVo"/>
+        where doc_id = #{docId}
+        <if test="keyword != null and keyword != ''">
+            and (content like concat('%', #{keyword}, '%') or article_no like concat('%', #{keyword}, '%'))
+        </if>
+        order by id asc
+    </select>
+
+    <select id="selectChunkById" resultMap="LawKnowledgeChunkResult">
+        <include refid="selectChunkVo"/>
+        where id = #{id}
+    </select>
+
+    <update id="updateChunk" parameterType="LawKnowledgeChunk">
+        update law_knowledge_chunk
+        set article_no  = #{articleNo},
+            content     = #{content},
+            keywords    = #{keywords},
+            token_count = #{tokenCount}
+        where id = #{id}
+    </update>
+
+    <delete id="deleteChunkById">
+        delete from law_knowledge_chunk where id = #{id} and doc_id = #{docId}
+    </delete>
+
+    <delete id="deleteChunksByDocId">
+        delete from law_knowledge_chunk where doc_id = #{docId}
+    </delete>
+
+    <delete id="deleteChunksByDocIds">
+        delete from law_knowledge_chunk where doc_id in
+        <foreach collection="docIds" item="docId" open="(" separator="," close=")">
+            #{docId}
+        </foreach>
+    </delete>
+
+    <select id="countChunksByDocId" resultType="int">
+        select count(*) from law_knowledge_chunk where doc_id = #{docId}
+    </select>
+
+    <select id="selectChunksByDocIds" resultMap="LawKnowledgeChunkResult">
+        select c.id, c.doc_id, c.article_no, c.content, c.keywords, c.token_count, c.create_time,
+               d.title as doc_title
+        from law_knowledge_chunk c
+        inner join law_knowledge_doc d on d.id = c.doc_id
+        where d.status = '0'
+          and c.doc_id in
+        <foreach collection="docIds" item="docId" open="(" separator="," close=")">
+            #{docId}
+        </foreach>
+        order by c.id asc
+    </select>
+
+</mapper>

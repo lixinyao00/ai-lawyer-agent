@@ -6,10 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
@@ -34,13 +36,16 @@ import com.ruoyi.lawyer.client.AiChatClient;
 import com.ruoyi.lawyer.client.AiClientException;
 import com.ruoyi.lawyer.config.LawyerAiProperties;
 import com.ruoyi.lawyer.config.LawyerChatProperties;
+import com.ruoyi.lawyer.config.LawyerKnowledgeProperties;
 import com.ruoyi.lawyer.domain.LawChatMessage;
 import com.ruoyi.lawyer.domain.LawChatSession;
 import com.ruoyi.lawyer.dto.SendMessageRequest;
 import com.ruoyi.lawyer.mapper.LawChatMessageMapper;
 import com.ruoyi.lawyer.mapper.LawChatSessionMapper;
+import com.ruoyi.lawyer.retrieval.KnowledgeRetriever;
 import com.ruoyi.lawyer.support.LawSessionLockService;
 import com.ruoyi.lawyer.vo.ChatReplyVO;
+import com.ruoyi.lawyer.vo.CitationVO;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -76,6 +81,12 @@ class LawChatServiceImplTest
     private LawyerChatProperties chatProperties;
 
     @Mock
+    private LawyerKnowledgeProperties knowledgeProperties;
+
+    @Mock
+    private KnowledgeRetriever knowledgeRetriever;
+
+    @Mock
     private LawSessionLockService lockService;
 
     @Mock
@@ -107,6 +118,7 @@ class LawChatServiceImplTest
         lenient().when(chatProperties.getHistoryMaxChars()).thenReturn(12000);
         lenient().when(chatProperties.getPendingTimeoutSeconds()).thenReturn(120L);
         lenient().when(aiProperties.getModel()).thenReturn("test-model");
+        lenient().when(knowledgeProperties.isEnabled()).thenReturn(false);
 
         Resource promptResource = mock(Resource.class);
         lenient().when(promptResource.getInputStream())
@@ -221,6 +233,47 @@ class LawChatServiceImplTest
         assertEquals("user", captor.getValue().get(1).getRole());
         assertNotNull(captor.getValue().get(17).getContent());
         assertEquals("user", captor.getValue().get(17).getRole());
+    }
+
+    @Test
+    void knowledgeCitationsAreStoredAndReturned()
+    {
+        when(lockService.tryLock(SESSION_ID)).thenReturn("token-1");
+        when(knowledgeProperties.isEnabled()).thenReturn(true);
+        when(knowledgeProperties.getTopK()).thenReturn(4);
+        when(knowledgeProperties.getPromptMaxChars()).thenReturn(4000);
+        when(aiChatClient.chat(anyList())).thenReturn("回答");
+
+        CitationVO citation = new CitationVO();
+        citation.setChunkId(5L);
+        citation.setDocId(1L);
+        citation.setDocTitle("中华人民共和国劳动合同法");
+        citation.setArticleNo("第四十七条");
+        citation.setSnippet("经济补偿按劳动者在本单位工作的年限……");
+        citation.setScore(7.42);
+        when(knowledgeRetriever.search(anyString(), eq(4))).thenReturn(List.of(citation));
+        when(knowledgeRetriever.buildPromptSection(anyList(), anyInt())).thenReturn("【参考法条】...");
+        when(objectMapper.writeValueAsString(any())).thenReturn("[{\"chunkId\":5}]");
+
+        ChatReplyVO reply = service.sendMessage(SESSION_ID, USER_ID, request);
+
+        assertEquals("success", reply.getStatus());
+        assertEquals(1, reply.getCitations().size());
+        assertEquals("第四十七条", reply.getCitations().get(0).getArticleNo());
+
+        ArgumentCaptor<LawChatMessage> captor = ArgumentCaptor.forClass(LawChatMessage.class);
+        verify(messageMapper, times(2)).insertMessage(captor.capture());
+        LawChatMessage assistant = captor.getAllValues().stream()
+                .filter(message -> "assistant".equals(message.getRole()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("[{\"chunkId\":5}]", assistant.getCitationsJson());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<AiChatClient.ChatMessage>> messages = ArgumentCaptor.forClass(List.class);
+        verify(aiChatClient).chat(messages.capture());
+        assertEquals("system", messages.getValue().get(0).getRole());
+        assertEquals(true, messages.getValue().get(0).getContent().contains("【参考法条】"));
     }
 
     private LawChatMessage message(String role, String content, String status)

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.lawyer.mapper.LawKnowledgeDocMapper">
+
+    <resultMap type="LawKnowledgeDoc" id="LawKnowledgeDocResult">
+        <result property="id"            column="id"             />
+        <result property="title"         column="title"          />
+        <result property="category"      column="category"       />
+        <result property="docNumber"     column="doc_number"     />
+        <result property="effectiveDate" column="effective_date" />
+        <result property="status"        column="status"         />
+        <result property="chunkCount"    column="chunk_count"    />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"        column="remark"         />
+    </resultMap>
+
+    <sql id="selectDocVo">
+        select id, title, category, doc_number, effective_date, status, chunk_count,
+               create_by, create_time, update_time, remark
+        from law_knowledge_doc
+    </sql>
+
+    <select id="selectDocList" resultMap="LawKnowledgeDocResult">
+        <include refid="selectDocVo"/>
+        <where>
+            <if test="title != null and title != ''">
+                and title like concat('%', #{title}, '%')
+            </if>
+            <if test="category != null and category != ''">
+                and category = #{category}
+            </if>
+            <if test="status != null and status != ''">
+                and status = #{status}
+            </if>
+        </where>
+        order by create_time desc, id desc
+    </select>
+
+    <select id="selectDocById" resultMap="LawKnowledgeDocResult">
+        <include refid="selectDocVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectEnabledDocs" resultMap="LawKnowledgeDocResult">
+        <include refid="selectDocVo"/>
+        where status = '0'
+        order by id asc
+    </select>
+
+    <insert id="insertDoc" parameterType="LawKnowledgeDoc" useGeneratedKeys="true" keyProperty="id">
+        insert into law_knowledge_doc (
+            title, category, doc_number, effective_date, status, chunk_count,
+            create_by, create_time, update_time, remark
+        ) values (
+            #{title}, #{category}, #{docNumber}, #{effectiveDate}, #{status}, #{chunkCount},
+            #{createBy}, #{createTime}, #{updateTime}, #{remark}
+        )
+    </insert>
+
+    <update id="updateDoc" parameterType="LawKnowledgeDoc">
+        update law_knowledge_doc
+        set title          = #{title},
+            category       = #{category},
+            doc_number     = #{docNumber},
+            effective_date = #{effectiveDate},
+            status         = #{status},
+            update_time    = #{updateTime},
+            remark         = #{remark}
+        where id = #{id}
+    </update>
+
+    <delete id="deleteDocByIds">
+        delete from law_knowledge_doc where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <update id="updateChunkCount">
+        update law_knowledge_doc
+        set chunk_count = #{chunkCount},
+            update_time = now()
+        where id = #{id}
+    </update>
+
+    <select id="countDocs" resultType="long">
+        select count(*) from law_knowledge_doc
+    </select>
+
+</mapper>

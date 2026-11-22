@@ -31,11 +31,13 @@ import com.ruoyi.lawyer.client.AiChatClient;
 import com.ruoyi.lawyer.client.AiClientException;
 import com.ruoyi.lawyer.config.LawyerAiProperties;
 import com.ruoyi.lawyer.config.LawyerChatProperties;
+import com.ruoyi.lawyer.config.LawyerKnowledgeProperties;
 import com.ruoyi.lawyer.domain.LawChatMessage;
 import com.ruoyi.lawyer.domain.LawChatSession;
 import com.ruoyi.lawyer.dto.SendMessageRequest;
 import com.ruoyi.lawyer.mapper.LawChatMessageMapper;
 import com.ruoyi.lawyer.mapper.LawChatSessionMapper;
+import com.ruoyi.lawyer.retrieval.KnowledgeRetriever;
 import com.ruoyi.lawyer.service.ILawChatService;
 import com.ruoyi.lawyer.support.ChatMessageConverter;
 import com.ruoyi.lawyer.support.ContextTrimmer;
@@ -44,6 +46,7 @@ import com.ruoyi.lawyer.support.LawSessionLockService;
 import com.ruoyi.lawyer.support.SseEventWriter;
 import com.ruoyi.lawyer.vo.ChatMessageVO;
 import com.ruoyi.lawyer.vo.ChatReplyVO;
+import com.ruoyi.lawyer.vo.CitationVO;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -95,6 +98,12 @@ public class LawChatServiceImpl implements ILawChatService
 
     @Autowired
     private LawyerChatProperties chatProperties;
+
+    @Autowired
+    private LawyerKnowledgeProperties knowledgeProperties;
+
+    @Autowired
+    private KnowledgeRetriever knowledgeRetriever;
 
     @Autowired
     private LawSessionLockService lockService;
@@ -173,11 +182,13 @@ public class LawChatServiceImpl implements ILawChatService
 
             // 在本轮消息入库之前读取历史，避免把当前问题重复带入上下文
             List<AiChatClient.ChatMessage> history = loadHistory(sessionId);
+            List<CitationVO> citations = retrieveCitations(content, history);
 
             Date now = new Date();
             LawChatMessage userMessage = buildMessage(sessionId, requestId, ROLE_USER, content, STATUS_SUCCESS, now);
             LawChatMessage assistantMessage = buildMessage(sessionId, requestId, ROLE_ASSISTANT, "",
                     STATUS_PENDING, now);
+            assistantMessage.setCitationsJson(serializeCitations(citations));
 
             try
             {
@@ -198,11 +209,12 @@ public class LawChatServiceImpl implements ILawChatService
             reply.setRequestId(requestId);
             reply.setUserMessageId(userMessage.getId());
             reply.setAssistantMessageId(assistantMessage.getId());
+            reply.setCitations(citations);
 
             try
             {
                 // 模型调用放在事务之外
-                String answer = generateReply(history, content);
+                String answer = generateReply(history, content, citations);
                 markAssistantResult(assistantMessage, STATUS_SUCCESS, answer, null, aiProperties.getModel());
                 reply.setStatus(STATUS_SUCCESS);
                 reply.setContent(answer);
@@ -260,13 +272,13 @@ public class LawChatServiceImpl implements ILawChatService
 
             convergeStalePending(sessionId);
             List<AiChatClient.ChatMessage> history = loadHistory(sessionId);
+            List<CitationVO> citations = retrieveCitations(content, history);
 
             Date now = new Date();
             LawChatMessage userMessage = buildMessage(sessionId, requestId, ROLE_USER, content, STATUS_SUCCESS, now);
             LawChatMessage assistantMessage = buildMessage(sessionId, requestId, ROLE_ASSISTANT, "",
                     STATUS_PENDING, now);
-            // M1 阶段无知识库，citations_json 保持 NULL
-            assistantMessage.setCitationsJson(null);
+            assistantMessage.setCitationsJson(serializeCitations(citations));
 
             try
             {
@@ -285,7 +297,7 @@ public class LawChatServiceImpl implements ILawChatService
             String sessionTitle = resolveSessionTitle(lockedSession, content);
             SseEmitter emitter = new SseEmitter(chatProperties.getSseTimeout());
             StreamContext context = new StreamContext(sessionId, requestId, sessionTitle,
-                    userMessage.getId(), assistantMessage.getId(), history, content,
+                    userMessage.getId(), assistantMessage.getId(), history, content, citations,
                     new SseEventWriter(emitter, objectMapper), token);
 
             // 客户端断开 / 超时 / 完成时置取消标志，通知模型读取停止
@@ -339,11 +351,13 @@ public class LawChatServiceImpl implements ILawChatService
                 handleAborted(context, assistantMessage, "");
                 return;
             }
+            sendCitationQuietly(context);
 
             heartbeat = heartbeatScheduler.scheduleAtFixedRate(() -> ping(context),
                     chatProperties.getHeartbeatSeconds(), chatProperties.getHeartbeatSeconds(), TimeUnit.SECONDS);
 
-            List<AiChatClient.ChatMessage> modelMessages = buildModelMessages(context.history, context.content);
+            List<AiChatClient.ChatMessage> modelMessages = buildModelMessages(context.history, context.content,
+                    context.citations);
             String answer = aiChatClient.streamChat(modelMessages, delta -> {
                 context.fullText.append(delta);
                 try
@@ -368,7 +382,7 @@ public class LawChatServiceImpl implements ILawChatService
 
             markAssistantResult(assistantMessage, STATUS_SUCCESS, answer, null, aiProperties.getModel());
             context.writer.send("done", doneData(STATUS_SUCCESS, assistantMessage.getId(), aiProperties.getModel(),
-                    answer));
+                    answer, context.citations));
             context.writer.complete();
         }
         catch (ClientAbortedException e)
@@ -460,6 +474,7 @@ public class LawChatServiceImpl implements ILawChatService
         Long userMessageId = userMessage == null ? null : userMessage.getId();
         Long assistantMessageId = assistantMessage == null ? null : assistantMessage.getId();
         String title = session == null ? DEFAULT_TITLE : session.getTitle();
+        List<CitationVO> citations = parseCitations(assistantMessage);
 
         try
         {
@@ -472,9 +487,11 @@ public class LawChatServiceImpl implements ILawChatService
             meta.put("replay", true);
             writer.send("meta", meta);
 
+            sendCitation(writer, citations);
+
             if (assistantMessage == null || STATUS_PENDING.equals(assistantMessage.getStatus()))
             {
-                writer.send("done", doneData(STATUS_PENDING, assistantMessageId, null, ""));
+                writer.send("done", doneData(STATUS_PENDING, assistantMessageId, null, "", citations));
             }
             else if (STATUS_SUCCESS.equals(assistantMessage.getStatus()))
             {
@@ -482,7 +499,7 @@ public class LawChatServiceImpl implements ILawChatService
                 delta.put("content", assistantMessage.getContent() == null ? "" : assistantMessage.getContent());
                 writer.send("delta", delta);
                 writer.send("done", doneData(STATUS_SUCCESS, assistantMessageId, assistantMessage.getModelName(),
-                        assistantMessage.getContent() == null ? "" : assistantMessage.getContent()));
+                        assistantMessage.getContent() == null ? "" : assistantMessage.getContent(), citations));
             }
             else
             {
@@ -520,15 +537,45 @@ public class LawChatServiceImpl implements ILawChatService
     /**
      * done 事件数据
      */
-    private Map<String, Object> doneData(String status, Long assistantMessageId, String modelName, String content)
+    private Map<String, Object> doneData(String status, Long assistantMessageId, String modelName, String content,
+            List<CitationVO> citations)
     {
         Map<String, Object> done = new LinkedHashMap<>();
         done.put("status", status);
         done.put("assistantMessageId", assistantMessageId);
         done.put("modelName", modelName);
         done.put("content", content);
-        done.put("citations", Collections.emptyList());
+        done.put("citations", citations == null ? Collections.emptyList() : citations);
         return done;
+    }
+
+    /**
+     * 发送 citation 事件（meta 之后、首个 delta 之前）
+     */
+    private void sendCitation(SseEventWriter writer, List<CitationVO> citations) throws IOException
+    {
+        if (citations == null || citations.isEmpty())
+        {
+            return;
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("citations", citations);
+        writer.send("citation", data);
+    }
+
+    /**
+     * 发送 citation 事件，失败只记日志（客户端已断开时由主流程处理）
+     */
+    private void sendCitationQuietly(StreamContext context)
+    {
+        try
+        {
+            sendCitation(context.writer, context.citations);
+        }
+        catch (IOException e)
+        {
+            context.cancel();
+        }
     }
 
     private void sendErrorQuietly(StreamContext context, String code, String message, Long assistantMessageId)
@@ -592,21 +639,122 @@ public class LawChatServiceImpl implements ILawChatService
     }
 
     /**
-     * 按「系统提示词 → 历史问答 → 本次问题」顺序组装模型消息
+     * 按「系统提示词 → 知识库参考法条 → 历史问答 → 本次问题」顺序组装模型消息
      */
-    private List<AiChatClient.ChatMessage> buildModelMessages(List<AiChatClient.ChatMessage> history, String content)
+    private List<AiChatClient.ChatMessage> buildModelMessages(List<AiChatClient.ChatMessage> history, String content,
+            List<CitationVO> citations)
     {
         List<AiChatClient.ChatMessage> messages = new ArrayList<>(history.size() + 2);
-        messages.add(new AiChatClient.ChatMessage("system", loadSystemPrompt()));
+        messages.add(new AiChatClient.ChatMessage("system", buildSystemPrompt(citations)));
         messages.addAll(history);
         messages.add(new AiChatClient.ChatMessage(ROLE_USER, content));
-        log.info("请求模型, 历史消息={} 条, 本次请求共={} 条", history.size(), messages.size());
+        log.info("请求模型, 历史消息={} 条, 引用法条={} 条, 本次请求共={} 条", history.size(),
+                citations == null ? 0 : citations.size(), messages.size());
         return messages;
     }
 
-    private String generateReply(List<AiChatClient.ChatMessage> history, String content)
+    /**
+     * 在系统提示词末尾追加检索到的参考法条，总长不超过 prompt-max-chars
+     */
+    private String buildSystemPrompt(List<CitationVO> citations)
     {
-        return aiChatClient.chat(buildModelMessages(history, content));
+        String systemPrompt = loadSystemPrompt();
+        if (!knowledgeProperties.isEnabled() || citations == null || citations.isEmpty())
+        {
+            return systemPrompt;
+        }
+        int budget = knowledgeProperties.getPromptMaxChars() - systemPrompt.length();
+        if (budget <= 0)
+        {
+            return systemPrompt;
+        }
+        String section = knowledgeRetriever.buildPromptSection(citations, budget);
+        return section.isEmpty() ? systemPrompt : systemPrompt + "\n" + section;
+    }
+
+    private String generateReply(List<AiChatClient.ChatMessage> history, String content,
+            List<CitationVO> citations)
+    {
+        return aiChatClient.chat(buildModelMessages(history, content, citations));
+    }
+
+    /**
+     * 检索本次问题相关法条；短问题拼接上一条用户问题，异常不阻断聊天
+     */
+    private List<CitationVO> retrieveCitations(String content, List<AiChatClient.ChatMessage> history)
+    {
+        if (!knowledgeProperties.isEnabled())
+        {
+            return new ArrayList<>();
+        }
+        String query = content;
+        if (content.length() < 30)
+        {
+            String previous = lastUserContent(history);
+            if (StringUtils.isNotEmpty(previous))
+            {
+                query = previous + " " + content;
+            }
+        }
+        try
+        {
+            List<CitationVO> citations = knowledgeRetriever.search(query, knowledgeProperties.getTopK());
+            return citations == null ? new ArrayList<>() : citations;
+        }
+        catch (Exception e)
+        {
+            log.warn("法条检索失败，本次不注入知识库: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    private String lastUserContent(List<AiChatClient.ChatMessage> history)
+    {
+        if (history == null || history.isEmpty())
+        {
+            return null;
+        }
+        for (int i = history.size() - 1; i >= 0; i--)
+        {
+            AiChatClient.ChatMessage message = history.get(i);
+            if (ROLE_USER.equals(message.getRole()) && StringUtils.isNotEmpty(message.getContent()))
+            {
+                return message.getContent();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 序列化法条引用，空列表返回 null（落库为 NULL）
+     */
+    private String serializeCitations(List<CitationVO> citations)
+    {
+        if (citations == null || citations.isEmpty())
+        {
+            return null;
+        }
+        try
+        {
+            return objectMapper.writeValueAsString(citations);
+        }
+        catch (Exception e)
+        {
+            log.warn("法条引用序列化失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 解析消息上的法条引用，异常或空值返回空列表
+     */
+    private List<CitationVO> parseCitations(LawChatMessage message)
+    {
+        if (message == null || StringUtils.isEmpty(message.getCitationsJson()))
+        {
+            return new ArrayList<>();
+        }
+        return ChatMessageConverter.toVO(message, objectMapper).getCitations();
     }
 
     /**
@@ -800,6 +948,7 @@ public class LawChatServiceImpl implements ILawChatService
         reply.setStatus(assistantMessage.getStatus());
         reply.setContent(assistantMessage.getContent());
         reply.setErrorCode(assistantMessage.getErrorCode());
+        reply.setCitations(parseCitations(assistantMessage));
         if (STATUS_FAILED.equals(assistantMessage.getStatus()))
         {
             reply.setErrorMessage(REPLAY_FAILED_MESSAGE);
@@ -849,6 +998,8 @@ public class LawChatServiceImpl implements ILawChatService
 
         private final String content;
 
+        private final List<CitationVO> citations;
+
         private final SseEventWriter writer;
 
         private final String token;
@@ -859,7 +1010,7 @@ public class LawChatServiceImpl implements ILawChatService
 
         private StreamContext(Long sessionId, String requestId, String sessionTitle, Long userMessageId,
                 Long assistantMessageId, List<AiChatClient.ChatMessage> history, String content,
-                SseEventWriter writer, String token)
+                List<CitationVO> citations, SseEventWriter writer, String token)
         {
             this.sessionId = sessionId;
             this.requestId = requestId;
@@ -868,6 +1019,7 @@ public class LawChatServiceImpl implements ILawChatService
             this.assistantMessageId = assistantMessageId;
             this.history = history;
             this.content = content;
+            this.citations = citations;
             this.writer = writer;
             this.token = token;
         }

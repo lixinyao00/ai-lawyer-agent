@@ -384,3 +384,290 @@ html.dark .lawyer-surface {
     animation: none;
   }
 }
+
+/* M2 法条引用卡片（CitationCards.vue） */
+.citation-box {
+  margin-top: 10px;
+  border: 1px solid var(--law-line);
+  border-radius: 12px;
+  background: var(--law-panel);
+  overflow: hidden;
+  transition: border-color .16s ease;
+}
+
+.citation-box:hover {
+  border-color: color-mix(in srgb, var(--law-accent) 28%, var(--law-line));
+}
+
+.citation-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  width: 100%;
+  padding: 9px 13px;
+  border: 0;
+  background: transparent;
+  color: var(--law-ink);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .16s ease;
+}
+
+.citation-toggle:hover {
+  background: var(--law-hover);
+}
+
+.citation-toggle:focus-visible {
+  outline: 2px solid var(--law-accent);
+  outline-offset: -2px;
+}
+
+.citation-toggle-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.citation-toggle-arrow {
+  color: var(--law-muted);
+  font-size: 12px;
+  transition: transform .18s ease;
+}
+
+.citation-toggle-arrow.is-expanded {
+  transform: rotate(90deg);
+}
+
+.citation-toggle-icon {
+  color: var(--law-accent);
+  font-size: 15px;
+}
+
+.citation-toggle-title {
+  color: var(--law-accent);
+  font-weight: 650;
+}
+
+.citation-verify-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--law-line);
+  border-radius: 999px;
+  background: var(--law-card);
+  color: var(--law-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.citation-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.citation-card {
+  padding: 10px 12px;
+  border: 1px solid var(--law-line);
+  border-radius: 10px;
+  background: var(--law-card);
+}
+
+.citation-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.citation-card-title-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.citation-card-index {
+  color: var(--law-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.citation-card-title {
+  margin: 0;
+  color: var(--law-ink);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.citation-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.citation-score-tag {
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--law-wash);
+  color: var(--law-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.citation-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--law-line);
+  border-radius: 6px;
+  background: var(--law-panel);
+  color: var(--law-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.citation-copy-btn:hover {
+  border-color: var(--law-accent);
+  color: var(--law-accent);
+  background: var(--law-wash);
+}
+
+.citation-card-body {
+  margin-top: 6px;
+}
+
+.citation-snippet {
+  margin: 0;
+  color: var(--law-muted);
+  font-size: 12.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.citation-snippet.is-collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.citation-expand-btn {
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--law-accent);
+  font-size: 12px;
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.citation-expand-btn:hover {
+  text-decoration: underline;
+}
+
+/* M2 后台法律知识库管理页 */
+.knowledge-page .mb16 {
+  margin-bottom: 16px;
+}
+
+.knowledge-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.knowledge-chunk-search {
+  margin-bottom: 4px;
+}
+
+.knowledge-chunk-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 13px;
+}
+
+.knowledge-muted-text {
+  color: var(--law-muted);
+  font-size: 12px;
+}
+
+.knowledge-debug-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.knowledge-debug-list {
+  display: grid;
+  gap: 12px;
+}
+
+.knowledge-debug-card {
+  padding: 12px 14px;
+  border: 1px solid var(--law-line);
+  border-radius: 10px;
+  background: var(--law-panel);
+}
+
+.knowledge-debug-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.knowledge-debug-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--law-ink);
+}
+
+.knowledge-debug-rank {
+  color: var(--law-accent);
+  font-weight: 700;
+}
+
+.knowledge-debug-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.knowledge-debug-snippet {
+  margin: 0;
+  color: var(--law-muted);
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .citation-toggle {
+    padding: 8px 10px;
+  }
+
+  .citation-list {
+    padding: 0 8px 10px;
+  }
+}

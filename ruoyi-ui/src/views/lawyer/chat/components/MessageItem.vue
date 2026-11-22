@@ -42,19 +42,8 @@
           已停止生成（已保留当前内容）
         </p>
 
-        <!-- M2 引用依据兼容展示位 -->
-        <details v-if="Array.isArray(message.citations) && message.citations.length" class="citation-preview">
-          <summary>参考依据（{{ message.citations.length }}）</summary>
-          <ul class="citation-preview-list">
-            <li v-for="(item, idx) in message.citations" :key="item.chunkId || idx" class="citation-preview-item">
-              <div class="citation-preview-title">
-                《{{ item.docTitle || '法律法规' }}》{{ item.articleNo ? ' ' + item.articleNo : '' }}
-              </div>
-              <p v-if="item.snippet" class="citation-preview-snippet">{{ item.snippet }}</p>
-            </li>
-          </ul>
-          <p class="citation-preview-note">依据由知识库检索，请以官方文本核验</p>
-        </details>
+        <!-- M2 法条引用依据卡片 -->
+        <CitationCards :citations="message.citations" />
       </template>
     </div>
   </article>
@@ -64,6 +53,7 @@
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { RefreshRight } from '@element-plus/icons-vue'
 import LawyerMark from '@/components/LawyerMark.vue'
+import CitationCards from './CitationCards.vue'
 import { renderMarkdown } from '@/utils/lawyer/markdown'
 
 const props = defineProps({
@@ -225,48 +215,6 @@ onBeforeUnmount(() => {
 }
 
 .message-status-note {
-  margin: 4px 0 0;
-  color: var(--law-muted);
-  font-size: 12px;
-}
-
-.citation-preview {
-  margin-top: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--law-line);
-  border-radius: 10px;
-  background: var(--law-panel);
-  font-size: 13px;
-}
-
-.citation-preview summary {
-  cursor: pointer;
-  color: var(--law-accent);
-  font-weight: 600;
-}
-
-.citation-preview-list {
-  margin: 8px 0 6px;
-  padding-left: 16px;
-}
-
-.citation-preview-item {
-  margin-bottom: 6px;
-}
-
-.citation-preview-title {
-  font-weight: 600;
-  color: var(--law-ink);
-}
-
-.citation-preview-snippet {
-  margin: 2px 0 0;
-  color: var(--law-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.citation-preview-note {
   margin: 4px 0 0;
   color: var(--law-muted);
   font-size: 12px;

@@ -1,0 +1,7 @@
+# 开发环境可访问接口文档。
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    tags-sorter: alpha

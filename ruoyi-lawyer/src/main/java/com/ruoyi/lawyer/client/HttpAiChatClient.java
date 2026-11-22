@@ -1,0 +1,144 @@
+package com.ruoyi.lawyer.client;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
+import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.lawyer.config.LawyerAiProperties;
+
+/**
+ * OpenAI 兼容协议的模型客户端实现
+ *
+ * @author ruoyi
+ */
+@Component
+public class HttpAiChatClient implements AiChatClient
+{
+    private static final Logger log = LoggerFactory.getLogger(HttpAiChatClient.class);
+
+    @Autowired
+    private LawyerAiProperties properties;
+
+    private volatile HttpClient httpClient;
+
+    private HttpClient client()
+    {
+        HttpClient local = httpClient;
+        if (local == null)
+        {
+            synchronized (this)
+            {
+                local = httpClient;
+                if (local == null)
+                {
+                    local = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofMillis(properties.getConnectTimeout()))
+                            .build();
+                    httpClient = local;
+                }
+            }
+        }
+        return local;
+    }
+
+    @Override
+    public String chat(List<ChatMessage> messages)
+    {
+        if (!properties.isConfigured())
+        {
+            throw new ServiceException("模型服务未配置，请设置 LAWYER_AI_API_KEY 等配置");
+        }
+
+        JSONArray messageArray = new JSONArray();
+        for (ChatMessage message : messages)
+        {
+            JSONObject item = new JSONObject();
+            item.put("role", message.getRole());
+            item.put("content", message.getContent());
+            messageArray.add(item);
+        }
+        JSONObject body = new JSONObject();
+        body.put("model", properties.getModel());
+        body.put("messages", messageArray);
+        body.put("stream", false);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(properties.getBaseUrl() + "/chat/completions"))
+                .timeout(Duration.ofMillis(properties.getRequestTimeout()))
+                .header("Authorization", "Bearer " + properties.getApiKey())
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body.toJSONString()))
+                .build();
+
+        HttpResponse<String> response;
+        try
+        {
+            response = client().send(request, HttpResponse.BodyHandlers.ofString());
+        }
+        catch (java.net.http.HttpTimeoutException e)
+        {
+            // 请求超时，日志只记录状态不记录正文和密钥
+            log.warn("模型请求超时, model={}", properties.getModel());
+            throw new ServiceException("模型请求超时，请稍后重试");
+        }
+        catch (Exception e)
+        {
+            log.warn("模型请求异常: {}", e.getMessage());
+            throw new ServiceException("模型服务连接失败，请稍后重试");
+        }
+
+        if (response.statusCode() == 401)
+        {
+            log.warn("模型服务鉴权失败, model={}", properties.getModel());
+            throw new ServiceException("模型服务鉴权失败，请检查 API Key");
+        }
+        if (response.statusCode() != 200)
+        {
+            // 不把服务商原始响应写进日志或抛给用户
+            log.warn("模型服务返回异常状态, status={}", response.statusCode());
+            throw new ServiceException("模型服务暂时不可用，请稍后重试");
+        }
+
+        return parseContent(response.body());
+    }
+
+    /**
+     * 解析 choices[0].message.content，结构不符合时抛出明确异常
+     */
+    private String parseContent(String responseBody)
+    {
+        try
+        {
+            JSONObject root = JSONObject.parseObject(responseBody);
+            JSONArray choices = root.getJSONArray("choices");
+            if (choices == null || choices.isEmpty())
+            {
+                throw new ServiceException("模型返回内容为空");
+            }
+            String content = choices.getJSONObject(0).getJSONObject("message").getString("content");
+            if (content == null || content.isBlank())
+            {
+                throw new ServiceException("模型返回内容为空");
+            }
+            return content;
+        }
+        catch (ServiceException e)
+        {
+            throw e;
+        }
+        catch (Exception e)
+        {
+            log.warn("模型响应结构解析失败: {}", e.getMessage());
+            throw new ServiceException("模型返回格式异常，请稍后重试");
+        }
+    }
+}

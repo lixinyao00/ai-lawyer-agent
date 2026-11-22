@@ -45,3 +45,13 @@ nbdist/
 !*/build/*.java
 !*/build/*.html
 !*/build/*.xml
+
+######################################################################
+# 前端内层仓库备份目录，不纳入版本控制
+ruoyi-ui/.git.bak/
+
+.DS_Store
+dump.rdb
+node_modules/
+ruoyi-ui/node_modules/
+ruoyi-ui/dist/

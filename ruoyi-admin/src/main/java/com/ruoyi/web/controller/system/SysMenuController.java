@@ -2,6 +2,8 @@ package com.ruoyi.web.controller.system;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -58,6 +60,7 @@ public class SysMenuController extends BaseController
     /**
      * 获取菜单下拉树列表
      */
+    @PreAuthorize("@ss.hasAnyPermi('system:role:add,system:role:edit,system:menu:query,system:menu:add,system:menu:edit')")
     @GetMapping("/treeselect")
     public AjaxResult treeselect(SysMenu menu)
     {
@@ -68,12 +71,17 @@ public class SysMenuController extends BaseController
     /**
      * 加载对应角色菜单列表树
      */
+    @PreAuthorize("@ss.hasPermi('system:role:edit')")
     @GetMapping(value = "/roleMenuTreeselect/{roleId}")
     public AjaxResult roleMenuTreeselect(@PathVariable("roleId") Long roleId)
     {
-        List<SysMenu> menus = menuService.selectMenuList(getUserId());
+        SysMenu query = new SysMenu();
+        query.setStatus(UserConstants.NORMAL);
+        List<SysMenu> menus = menuService.selectMenuList(query, getUserId());
+        Set<Long> menuIds = menus.stream().map(SysMenu::getMenuId).collect(Collectors.toSet());
         AjaxResult ajax = AjaxResult.success();
-        ajax.put("checkedKeys", menuService.selectMenuListByRoleId(roleId));
+        ajax.put("checkedKeys", menuService.selectMenuListByRoleId(roleId).stream()
+                .filter(menuIds::contains).toList());
         ajax.put("menus", menuService.buildMenuTreeSelect(menus));
         return ajax;
     }

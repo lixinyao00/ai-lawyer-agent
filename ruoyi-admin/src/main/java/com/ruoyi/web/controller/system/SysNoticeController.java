@@ -53,6 +53,7 @@ public class SysNoticeController extends BaseController
     /**
      * 根据通知公告编号获取详细信息
      */
+    @PreAuthorize("@ss.hasPermi('system:notice:list')")
     @GetMapping(value = "/{noticeId}")
     public AjaxResult getInfo(@PathVariable Long noticeId)
     {
@@ -86,6 +87,7 @@ public class SysNoticeController extends BaseController
     /**
      * 首页顶部公告列表（返回全部正常公告，带当前用户已读标记，最多5条）
      */
+    @PreAuthorize("@ss.hasPermi('system:notice:list')")
     @GetMapping("/listTop")
     @ResponseBody
     public AjaxResult listTop()
@@ -101,6 +103,7 @@ public class SysNoticeController extends BaseController
     /**
      * 标记公告已读
      */
+    @PreAuthorize("@ss.hasPermi('system:notice:list')")
     @PostMapping("/markRead")
     @ResponseBody
     public AjaxResult markRead(Long noticeId)
@@ -113,6 +116,7 @@ public class SysNoticeController extends BaseController
     /**
      * 批量标记已读
      */
+    @PreAuthorize("@ss.hasPermi('system:notice:list')")
     @PostMapping("/markReadAll")
     @ResponseBody
     public AjaxResult markReadAll(String ids)

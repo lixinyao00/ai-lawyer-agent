@@ -72,6 +72,7 @@ public class SysUserController extends BaseController
     {
         List<SysUser> list = userService.selectUserList(user);
         ExcelUtil<SysUser> util = new ExcelUtil<SysUser>(SysUser.class);
+        util.hideColumn("dept");
         util.exportExcel(response, list, "用户数据");
     }
 
@@ -87,10 +88,12 @@ public class SysUserController extends BaseController
         return success(message);
     }
 
+    @PreAuthorize("@ss.hasPermi('system:user:import')")
     @PostMapping("/importTemplate")
     public void importTemplate(HttpServletResponse response)
     {
         ExcelUtil<SysUser> util = new ExcelUtil<SysUser>(SysUser.class);
+        util.hideColumn("deptId");
         util.importTemplateExcel(response, "用户数据");
     }
 

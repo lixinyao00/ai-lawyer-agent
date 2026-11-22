@@ -1,0 +1,31 @@
+.lawyer-surface {
+  --law-bg: #fbfbf8;
+  --law-panel: #f1f2ed;
+  --law-card: #fff;
+  --law-line: #e1e5dc;
+  --law-ink: #202720;
+  --law-muted: #5f695f;
+  --law-accent: #314a39;
+  --law-accent-strong: #233b2b;
+  --law-wash: #e6eee2;
+  --law-hover: #e8ebe3;
+  --law-on-accent: #fff;
+  --law-shadow: 0 2px 5px #24372707, 0 12px 28px #2437270a;
+  color: var(--law-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+html.dark .lawyer-surface {
+  --law-bg: #191d1a;
+  --law-panel: #202621;
+  --law-card: #242b25;
+  --law-line: #39443b;
+  --law-ink: #eef4ec;
+  --law-muted: #a8b5a9;
+  --law-accent: #cadec8;
+  --law-accent-strong: #e0efdd;
+  --law-wash: #303f33;
+  --law-hover: #303a31;
+  --law-on-accent: #203126;
+  --law-shadow: 0 8px 28px #0003;
+}

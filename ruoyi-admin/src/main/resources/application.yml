@@ -16,7 +16,7 @@ ruoyi:
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为8080
-  port: 8080
+  port: 8989
   servlet:
     # 应用的访问路径
     context-path: /
@@ -97,7 +97,7 @@ token:
   # 令牌自定义标识
   header: Authorization
   # 令牌密钥
-  secret: abcdefghijklmnopqrstuvwxyz
+  secret: ${JWT_TOKEN_SECRET:change-me-in-production-min-32-chars}
   # 令牌有效期（默认30分钟）
   expireTime: 30
 
@@ -116,19 +116,27 @@ pagehelper:
   supportMethodsArguments: true
   params: count=countSql
 
-# Springdoc配置
+# 律师AI模型配置
+# 全部通过环境变量注入，切换任意 OpenAI 兼容服务商无需改代码
+lawyer:
+  ai:
+    # 模型服务基础地址（OpenAI兼容协议），需带版本段，例如 https://your-host/v1
+    base-url: ${LAWYER_AI_BASE_URL:https://api.openai.com/v1}
+    # 访问密钥，从环境变量读取，避免写入代码库
+    api-key: ${LAWYER_AI_API_KEY:}
+    # 模型名，例如 deepseek-chat、gpt-4o-mini
+    model: ${LAWYER_AI_MODEL:global:deepseek-v4.1-flash-sg}
+    # 建立连接超时（毫秒）
+    connect-timeout: ${LAWYER_AI_CONNECT_TIMEOUT:5000}
+    # 单次模型请求总超时（毫秒）
+    request-timeout: ${LAWYER_AI_REQUEST_TIMEOUT:60000}
+
+# 接口文档仅在 dev 环境启用
 springdoc:
   api-docs:
-    path: /v3/api-docs
+    enabled: false
   swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
-    tags-sorter: alpha
-  group-configs:
-    - group: 'default'
-      display-name: '测试模块'
-      paths-to-match: '/**'
-      packages-to-scan: com.ruoyi.web.controller.tool
+    enabled: false
 
 # 防盗链配置
 referer:

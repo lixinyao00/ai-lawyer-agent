@@ -32,7 +32,7 @@ V2.0 在 V1.0 基础上完成 **M5 ~ M7** 三大升级：BM25 + 语义向量 RRF
 - 向量检索：内置 `InMemoryVectorSearchEngine`（余弦相似度）与 `LocalSemanticEmbeddingEncoder` 确定性降级；可切换外部 Embedding 网关
 
 ```
-inconnu/
+ai-lawyer-agent/
 ├── ruoyi-admin/          # 启动模块、REST 控制器（含 lawyer/*）
 ├── ruoyi-lawyer/         # 律师业务：聊天、Agent、知识库/混合检索、合同审查、文书、DOCX、私有文件
 ├── ruoyi-common/         # 通用工具与基础能力
